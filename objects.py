@@ -1,8 +1,10 @@
 from random import shuffle
 
-# TODO: allow user to choose symbols or letters for suits
+# TODO: allow user to choose symbols or letters for suits and maybe mess with
+# ANSI escape sequences for colors
 # suits = ["\u2664", "\u2661", "\u2662", "\u2667"]
 suits = ["C", "D", "S", "H"]
+# suits = ["\033[94mC\033[00m", "\033[91mD\033[00m", "\033[94mS\033[00m", "\033[91mH\033[00m"]
 rank = ["2", "3", "4", "5", "6", "7", "8", "9", "10", "J", "Q", "K", "A"]
 
 
@@ -15,6 +17,7 @@ class Card:
         # id is used to concisely display the card
         self.__rank = rank[1]
         self.__suit = suit
+        self.__location = -1
         self.__id = f"{rank[0]}{suit}"
 
     @property
@@ -28,6 +31,19 @@ class Card:
     @property
     def id(self):
         return self.__id
+
+    @property
+    def location(self):
+        """Where the card belongs, e.g. the deck (-1), the community cards (0),
+        player 1 (1), etc."""
+        return self.__location
+
+    @location.setter
+    def location(self, value):
+        self.__location = value
+
+    def __repr__(self):
+        return f"{self.id}"
 
 
 class Deck:
@@ -49,13 +65,10 @@ class Deck:
 
 
 class Player:
-    unique_id = 1
-
-    def __init__(self):
-        self.__id = Player.unique_id
+    def __init__(self, id: int):
+        self.__id = id
         self.__hole = ()
         # How many of each suit are in player's hand. Updated on each deal.
-        Player.unique_id += 1
         return
 
     @property
@@ -71,28 +84,37 @@ class Player:
         """The id property."""
         return self.__id
 
+    def __repr__(self):
+        return f"Player {self.id}: {self.hole}"
+
 
 class Dealer:
 
     streets = {"3": "Flop", "4": "Turn", "5": "River"}
 
-    def __init__(self, players=2):
-        self.__deck = self.get_new_deck()
-        self.__players = [Player() for i in range(players)]
+    def __init__(self, players: list):
+        self.__deck = self.get_new_deck().cards
+        # List of Player() objects
+        self.__players = [player for player in players]
         self.__community_cards = []
 
-        self.deal_to_players()
-        self.deal_flop()
-        self.deal_turn()
-        self.deal_river()
         return
+
+    @property
+    def deck(self):
+        return self.__deck
 
     def burn_card(self):
-        self.remaining_cards().pop()
+        self.deck.pop()
         return
 
-    def deal_card(self):
-        card = self.remaining_cards().pop()
+    def deal_card(self, location=0):
+        card = self.deck.pop()
+        card.location = location
+        # Place card at the "bottom" of the deck so it can be used in
+        # calculating odds. Since it's marked by the location attribute, we
+        # know whether it's really in the deck (-1) or elsewhere (0, 1, 2, ...)
+        self.deck.insert(0, card)
         return card
 
     def deal_flop(self):
@@ -113,7 +135,7 @@ class Dealer:
         for player in self.__players:
             hole = []
             for i in range(2):
-                card = self.deal_card()
+                card = self.deal_card(player.id)
                 hole.append(card)
             player.hole = tuple(sorted(hole, key=lambda card: card.rank, reverse=True))
         return
@@ -126,14 +148,6 @@ class Dealer:
     def get_new_deck(self):
         return Deck()
 
-    def hand_calculator(self, player_id: int):
-        return HandCalculator(
-            self.__players[player_id - 1].hole, self.__community_cards, player_id
-        )
-
-    def remaining_cards(self):
-        return self.__deck.cards
-
     def show_community_cards(self):
         cards = self.__community_cards
         print(f"{self.which_street(len(cards)):8}:", end="")
@@ -141,7 +155,7 @@ class Dealer:
         line_break()
         return
 
-    def show_players_hands(self):
+    def show_all_players_hands(self):
         for player in self.__players:
             print(f"Player {player.id}:", end="")
             [print(f" {card.id:2}", end="") for card in player.hole]
@@ -149,7 +163,7 @@ class Dealer:
         return
 
     def show_remaining_cards(self):
-        [print(card.id) for card in self.remaining_cards()]
+        [print(card.id) for card in self.deck]
         return
 
     def which_street(self, length: int):
@@ -161,157 +175,99 @@ class HandCalculator:
     """This object should only exist after a flop and it should not persist
     for more than one street to prevent duplicate counts."""
 
-    def __init__(self, hole: tuple, community_cards: list, player_id: int):
-        self.__player_id = player_id
-        self.__hole = hole
-        self.__community_cards = community_cards
-        self.__hand = self.sort_hand_by_rank()
-        self.__suit_count = self.set_suit_count()
-        self.__hands = {
-            "high card": self.__hand[0],
-            "kicker": self.__hand[1],
-            "one pair": 0,
-            "two pair": 0,
-            "set": 0,
-            # "straight": 0,
-            # "flush": 0,
-            "full house": 0,
-            "quads": 0,
-            # "staight flush": 0,
-            # "royal flush": 0,
-        }
+    match_dict = {2: "pair", 3: "set", 4: "quads"}
 
-        self.__flush = []
-        # Set None or a str value with a suit name to has_flush
-        has_flush = self.check_for_flush()
-        self.__straight = []
-        has_straight = self.check_for_straight()
-        self.__straight_flush = False
-        self.__royal_flush = False
+    # @param deck: list of all Card objects minus burned ones
+    # @param player: Player object with unique id and copy of hole cards.
+    # Note that the deck has the hole cards as well, with location attribute.
+    def __init__(self, deck: list, player: Player):
+        # The order of these attributes should be fixed, as calculating the
+        # value of one usually depends on calculating the previous ones.
+        self.__player = player
+        self.__deck = deck
+        self.__hole = [card for card in self.deck if card.location == self.player.id]
+        self.__comm_cards = [card for card in self.deck if card.location == 0]
 
-        if has_straight:
-            # set_straight() needs to be called before alert_straight()
-            self.set_straight(has_straight[0], has_straight[1])
-            if self.__straight[0].rank == 14 and has_flush:
-                self.alert_straight("royal flush", "650,000")
-                self.__royal_flush = True
-            elif has_flush:
-                self.__straight_flush = True
-                self.alert_straight("straight flush", "65,000")
-            self.alert_straight()
-        # We only call set_flush() and alert_flush() if has_flush and
-        # not has_straight.
-        elif has_flush:
-            self.set_flush(has_flush)
-            self.alert_flush(has_flush)
+        self.__suited = self.count_suited_cards()
+        self.__flush = self.flush_check()
 
-    def alert_flush(self, suit):
-        print(f"Player {self.__player_id} hit a flush! 1/500 chance")
 
-        print(f"From player hole :", end="")
-        [print(f" {card.id}", end="") for card in self.__hole if card.suit == suit]
-        line_break()
 
-        print(f"{'From board cards':} :", end="")
-        [
-            print(f" {card.id}", end="")
-            for card in self.__community_cards
-            if card.suit == suit
-        ]
-        line_break()
+    @property
+    def player(self):
+        return self.__player
 
-        print(f"{'Sorted flush':17}:", end="")
-        [print(f" {card.id}", end="") for card in self.__flush]
-        line_break()
+    @property
+    def deck(self):
+        return self.__deck
+
+    @property
+    def hole(self):
+        return self.__hole
+
+    @property
+    def comm_cards(self):
+        return self.__comm_cards
+
+    @property
+    def suited(self):
+        return self.__suited
+
+    @property
+    def flush(self):
+        return self.__flush
+
+    def count_suited_cards(self):
+        suit_count = {}
+        # Which suits does the player have in their hand?
+        player_suits = [card.suit for card in self.hole]
+        for suit in suits:
+            # Only add community cards to the suit count if those cards match a
+            # suit the player is holding. So, the dictionary can only have 1 to
+            # 2 keys in it.
+            if suit in player_suits:
+                suited = [
+                    card for card in self.hole if card.suit == suit
+                ]
+                suited += [
+                    card
+                    for card in self.comm_cards
+                    if card.suit == suit
+                ]
+                suited.sort(key=lambda card: card.rank, reverse=True)
+                length = len(suited)
+                # If there are six or seven suited cards in the hand for the
+                # player, only keep the top five.
+                if length > 5:
+                    suited = suited[:5]
+                suit_count[suit] = (length, suited)
+        return suit_count
+
+    def flush_check(self):
+        for cards in self.suited.values():
+            # If the length (cards[0]) of the suit count is 5, return the flush
+            if cards[0] == 5:
+                return cards[1]
         return
 
-    def alert_straight(self, type="straight", chance="250"):
-        print(f"Player {self.__player_id} hit a {type}! 1/{chance} chance")
 
-        print(f"From player hole :", end="")
-        [
-            print(f" {card.id}", end="")
-            for card in self.__hole
-            if card in self.__straight
-        ]
-        line_break()
+def main(d: Dealer):
+    d.deal_to_players()
+    d.show_all_players_hands()
+    d.deal_flop()
+    d.show_community_cards()
+    d.deal_turn()
+    d.show_community_cards()
+    d.deal_river()
+    d.show_community_cards()
 
-        print(f"From board cards :", end="")
-        [
-            print(f" {card.id}", end="")
-            for card in self.__community_cards
-            if card in self.__straight
-        ]
-        line_break()
-
-        print(f"{'Sorted straight':17}:", end="")
-        [print(f" {card.id}", end="") for card in self.__straight]
-        line_break()
-        return
-
-    def check_for_flush(self):
-        for suit, count in self.__suit_count.items():
-            if count >= 5:
-                return suit
-
-    def check_for_straight(self):
-        for i in range(0, 2):
-            temp = [card.rank for card in self.__hand[i : i + 5]]
-            high = self.__hand[i].rank
-            low = self.__hand[i + 5].rank
-            # Must be a unique set of five ranks with a difference of 4
-            if high - low == 4 and len(set(temp)) == 5:
-                return i, i + 5
-
-    def print_hand(self):
-        print(f"Player {self.__player_id} hand:")
-        [print(card.id, end="") for card in self.__hand]
-        return
-
-    def print_suit_count(self):
-        print(f"Player {self.__player_id} Suit Count:")
-        for k, v in self.__suit_count.items():
-            print(f"{k}: {v}")
-
-    def set_flush(self, suit: str):
-        [self.__flush.append(card) for card in self.__hand if card.suit == suit]
-        # If there are 6 or 7 of the same suit in the hand, only keep top 5
-        if len(self.__flush) > 5:
-            self.__flush = self.__flush[:5]
-        return
-
-    def set_straight(self, low: int, high: int):
-        self.__straight = self.__hand[low:high]
-        return
-
-    def set_suit_count(self):
-        temp_suit_count = {suit: 0 for suit in suits}
-        for card in self.__hand:
-            temp_suit_count[card.suit] += 1
-        return temp_suit_count
-
-    def sort_hand_by_rank(self):
-        temp = list(self.__hole) + self.__community_cards
-        sorted_hand = sorted(temp, key=lambda card: card.rank, reverse=True)
-        return sorted_hand
+    h = HandCalculator(d.deck, players[0])
 
 
-def main():
-    d = Dealer()
-
-    # d.deal_to_players()
-    # d.show_players_hands()
-    # d.deal_flop()
-    # d.show_community_cards()
-    # d.deal_turn()
-    # d.show_community_cards()
-    # d.deal_river()
-    # d.show_community_cards()
-    h = d.hand_calculator(1)
-    h = d.hand_calculator(2)
-    # h.print_suit_count()
-
+i = 2
+players = [Player(i + 1) for i in range(i)]
 
 for i in range(100):
+    d = Dealer(players)
     # print(i)
-    main()
+    main(d)
