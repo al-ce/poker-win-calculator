@@ -237,10 +237,26 @@ class HandRanker:
         self.__player = player
         self.__deck = deck
         self.__hole = player.hole
-        self.__high_card = player.hole[0]
-        self.__kicker = player.hole[1]
+        self.__high_card = player.hole[0], player.hole[0].rank
+        self.__kicker = player.hole[1], player.hole[1].rank
         self.__comm_cards = [card for card in self.deck if card.location == 0]
         self.__dealt = sorted(self.hole + self.comm_cards, key=get_rank, reverse=True)
+
+        # Matches made by the table, either a pair in hand, or pairs, sets,
+        # quads made with or by the community cards
+        self.__table_matches = self.matches_check(self.dealt)
+
+        # Dict of only the highest matches + low pair.
+        self.__table_highest_matches = (
+            self.get_highest_matches(self.table_matches) if self.table_matches else None
+        )
+
+        self.__high_pair = self.check_pair()
+        self.__low_pair = self.check_low_pair()
+        self.__two_pair = self.check_two_pair()
+        self.__set = self.check_set()
+        self.__full_house = self.check_full_house()
+        self.__quads = self.check_quads()
 
         self.__suited = self.count_suited_cards()
         self.__flush = self.check_flush()
@@ -248,98 +264,19 @@ class HandRanker:
         self.__straight_flush = self.check_straight_flush()
         self.__royal_fush = self.check_royal_flush()
 
-        # Matches made by the player, either a pair in hand, or pairs, sets,
-        # quads made with the community cards
-        self.__player_matches = self.matches_check(self.hole, self.comm_cards)
-        # Matches made by the board only (useful for checking full house)
-        self.__board_matches = self.matches_check(self.comm_cards)
+    def __repr__(self) -> str:
+        # TODO: make some functions to help you format these correctly
+        hbr = self.hands_by_rank()
+        message = f"{str(self.comm_cards)}\n{str(self.hole)}\n"
+        if not hbr:
+            return f"Player {self.player.id} made no hands."
+        message += f"Player {self.player.id}'s hands:\n"
+        for k, v in hbr.items():
+            message += f"{k}: "
+            message += str(v)
+            message += "\n"
 
-        # Dict of only the highest matches + low pair.
-        self.__player_highest_matches = (
-            self.get_highest_matches(self.player_matches)
-            if self.player_matches
-            else None
-        )
-        self.__board_highest_matches = (
-            self.get_highest_matches(self.board_matches) if self.board_matches else None
-        )
-
-        self.__high_pair = self.check_high_pair()
-        self.__low_pair = self.check_low_pair()
-        self.__two_pair = self.check_two_pair()
-        self.__set = self.check_set()
-        self.__full_house = self.check_full_house()
-        self.__quads = self.check_quads()
-
-        # NOTE: test prints
-        # print(self.suited)
-        # if self.__flush:
-        #     print("F")
-        #     print(self.flush)
-        #     input("")
-        #
-        # if self.__straight:
-        #     print("S")
-        #     print(self.straight)
-        #     input("")
-        #
-        # if self.straight_flush:
-        #     print(self.straight_flush)
-        #     print(self.straight)
-        #     print(self.flush)
-        #     input("")
-        #
-        # if self.__royal_fush:
-        #     print("R")
-        #     print(self.__royal_fush)
-
-        # print("")
-        # print(self.hole)
-        # print(self.comm_cards)
-        # print("")
-        # # Only player hole's pairs
-        # if self.matches_check(self.hole):
-        #     print("P************")
-        #     print(self.matches_check(self.hole))
-        # # Ony board's matches
-        # if self.matches_check(self.comm_cards):
-        #     print("B............")
-        #     print(self.matches_check(self.comm_cards))
-        # Player's hole matches or board cards that matche with player's hole
-        # if self.player_matches:
-        #     print("M------------")
-        #     print(self.player_matches)
-        # print("")
-
-        # if self.player_matches:
-        #     print(self.player_matches)
-        # phm = self.player_highest_matches
-        # bhm = self.board_highest_matches
-        # if phm and bhm and len(phm) > 1 and "set" in phm and "low pair" in phm and "pair" in bhm and "low pair" in bhm:
-        #     print("")
-        #     print(self.hole)
-        #     print(self.comm_cards)
-        #     print("")
-        #     print(phm)
-        #     for k, v in self.player_matches.items():
-        #         if len(v) > 3:
-        #             print("")
-        #             print(self.player_matches)
-        #             pass
-        #
-        # if self.board_matches:
-        #     for k, v in self.board_matches.items():
-        #         if len(v) > 2:
-        #             print("")
-        #             print(self.board_matches)
-        #             pass
-        #
-        # if self.board_highest_matches and self.player_highest_matches and self.player_highest_matches["high pair"][1]:
-        #     print(self.dealt)
-        print(self.hole)
-        print(self.comm_cards)
-        #     print(self.board_highest_matches)
-        #     print(self.player_highest_matches)
+        return message
 
     @property
     def player(self):
@@ -414,48 +351,40 @@ class HandRanker:
         return self.__royal_fush
 
     @property
-    def player_matches(self):
-        return self.__player_matches
+    def table_matches(self):
+        return self.__table_matches
 
     @property
-    def board_matches(self):
-        return self.__board_matches
+    def table_highest_matches(self):
+        return self.__table_highest_matches
 
-    @property
-    def player_highest_matches(self):
-        return self.__player_highest_matches
-
-    @property
-    def board_highest_matches(self):
-        return self.__board_highest_matches
-
-    def check_high_pair(self):
-        phm = self.player_highest_matches
-        if phm and "pair" in phm:
-            return phm["pair"]
+    def check_pair(self):
+        thm = self.table_highest_matches
+        if thm and "pair" in thm:
+            return thm["pair"]
         return
 
     def check_low_pair(self):
-        phm = self.player_highest_matches
-        if phm and "low_pair" in phm:
-            return phm["low pair"]
+        thm = self.table_highest_matches
+        if thm and "low pair" in thm:
+            return thm["low pair"]
         return
 
     def check_set(self):
-        phm = self.player_highest_matches
-        if phm and "set" in phm:
-            return phm["set"]
+        thm = self.table_highest_matches
+        if thm and "set" in thm:
+            return thm["set"]
         return
 
     def check_quads(self):
-        phm = self.player_highest_matches
-        if phm and "quads" in phm:
-            return phm["quads"]
+        thm = self.table_highest_matches
+        if thm and "quads" in thm:
+            return thm["quads"]
         return
 
     def check_full_house(self):
-        phm = self.player_highest_matches
-        if not phm:
+        thm = self.table_highest_matches
+        if not thm:
             return
         set = self.set
         high_pair = self.high_pair
@@ -466,8 +395,8 @@ class HandRanker:
         return full_house
 
     def check_two_pair(self):
-        phm = self.player_highest_matches
-        if not phm:
+        thm = self.table_highest_matches
+        if not thm:
             return
         if self.low_pair and self.high_pair:
             two_pair = (self.high_pair, self.low_pair)
@@ -475,12 +404,13 @@ class HandRanker:
             return
         return two_pair
 
-
     def hands_by_rank(self):
+        # TODO: Change the data types for some of these so they're more easily
+        # accessible. e.g. nested dicts? might be bettes than nested tuples
         hands = {
+            "Kicker": (self.kicker, 0),
             "High Card": (self.high_card, 1),
-            "Kicker": (self.kicker, 2),
-            "High Pair": (self.high_pair, 3),
+            "Pair": (self.high_pair, 2),
             "Two Pair": (self.two_pair, 3),
             "Set": (self.set, 4),
             "Straight": (self.straight, 5),
@@ -539,13 +469,11 @@ class HandRanker:
             cards = matches[rank][0]
             matches[rank][1] = match_types[len(cards) - 2]
 
-            if not args and not matches:
+            if not args:
                 continue
 
             card_lists = [card for arg in args for card in arg]
             for other_card in card_lists:
-                # FIX: This excludes board-only pairs.
-                # if other_card.rank == rank and other_card not in matches[rank][0]:
                 if other_card.rank == rank and other_card not in matches[rank][0]:
                     matches[rank][0].append(other_card)
 
@@ -557,16 +485,6 @@ class HandRanker:
             key: matches[key] for key, cards in matches.items() if len(cards[0]) > 1
         }
         return matches
-
-    def is_player_in_hand(self, cards: list):
-        """Check that player has a card as part of the list."""
-        i = 0
-        for card in cards:
-            if card.location > 0:
-                i += 1
-        if i == 0:
-            return False
-        return True
 
     def is_ace_five_straight(self, card_ranks: list):
         ace_five = [2, 3, 4, 5, 14]
@@ -584,11 +502,6 @@ class HandRanker:
             # Since we're copying the list, we don't have to worry about
             # IndexErrors if we try to copy beyond the original list.
             temp = self.dealt[i : i + 5]
-
-            # Check that player has a card as part of the potential straight.
-            if not self.is_player_in_hand(temp):
-                continue
-
             temp = list(sorted(set(temp), key=get_rank))
             temp_ranks = [card.rank for card in temp]
 
@@ -608,7 +521,7 @@ class HandRanker:
             if temp_ranks == would_be_straight:
                 straights.append(temp)
 
-        # If a straight was found, return the highest one.
+        # If more than one straight was found, return the highest one.
         if len(straights) > 1:
             g = lambda cards: sum([card.rank for card in cards])
             highest_straight = sorted(straights, key=g, reverse=True)[0]
@@ -636,12 +549,9 @@ class HandRanker:
     def count_suited_cards(self):
         suit_count = {}
         # Which suits does the player have in their hand?
-        player_suits = [card.suit for card in self.hole]
+        dealt_suits = [card.suit for card in self.dealt]
         for suit in suits:
-            # Only add community cards to the suit count if those cards match a
-            # suit the player is holding. So, the dictionary can only have 1 to
-            # 2 keys in it.
-            if suit in player_suits:
+            if suit in dealt_suits:
                 suited = [card for card in self.dealt if card.suit == suit]
                 suited.sort(key=get_rank, reverse=True)
                 length = len(suited)
@@ -678,7 +588,7 @@ def main(d: Dealer):
     h = HandRanker(d.deck, players[0])
 
     line_break()
-    print(h.hands_by_rank())
+    print(h)
     line_break()
 
 
