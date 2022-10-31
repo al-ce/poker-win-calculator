@@ -317,6 +317,7 @@ class HandRanker:
                 message += str(hand)
                 # message += str(hand[0])
             message += "\n"
+
         return message
 
     @property
