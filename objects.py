@@ -434,7 +434,7 @@ class HandRanker:
     def check_quads(self):
         thm = self.table_highest_matches
         if thm and "quads" in thm:
-            return (thm["quads"],)
+            return [thm["quads"]]
         return
 
     def check_royal_flush(self):
