@@ -267,13 +267,14 @@ class HandRanker:
     def __repr__(self) -> str:
         # TODO: make some functions to help you format these correctly
         hbr = self.hands_by_rank()
-        message = f"{str(self.comm_cards)}\n{str(self.hole)}\n"
+        message = f"{'Board:':12}{str(self.comm_cards)}\n"\
+                f"{'Hole Cards:':12}{str(self.hole)}\n"
         if not hbr:
             return f"Player {self.player.id} made no hands."
-        message += f"Player {self.player.id}'s hands:\n"
+        message += f"{'P'+str(self.player.id)+' hands':^20}\n"
         for k, v in hbr.items():
-            message += f"{k}: "
-            message += str(v)
+            message += f"{k+':':11} "
+            message += str(v[0][0])
             message += "\n"
 
         return message
