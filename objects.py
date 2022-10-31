@@ -318,6 +318,13 @@ class HandRanker:
                 # message += str(hand[0])
             message += "\n"
 
+            no = ["High Card", "Kicker", "Two Pair", "Pair"]
+            if k not in no:
+                print(message)
+                print(self.hands_by_rank())
+                input("")
+
+
         return message.strip()
 
     @property
@@ -580,7 +587,7 @@ class HandRanker:
             return True
         return
 
-    def matches_check(self, cards: list, *args: list):
+    def matches_check(self, cards: list):
         """Check for which cards match in a list. If more than one list is
         passed to the function, check which cards from those lists match the
         rank of the original list."""
@@ -598,16 +605,6 @@ class HandRanker:
 
             # Update the type of match based on length of matching cards
             cards = matches[rank][0]
-            matches[rank][1] = match_types[len(cards) - 2]
-
-            if not args:
-                continue
-            card_lists = [card for arg in args for card in arg]
-            for other_card in card_lists:
-                if other_card.rank == rank and other_card not in matches[rank][0]:
-                    matches[rank][0].append(other_card)
-
-            # Update the type of match based on length of matching cards
             matches[rank][1] = match_types[len(cards) - 2]
 
         # Return a copy of matches dict with only keys with list of len 2+
