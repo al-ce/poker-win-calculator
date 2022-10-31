@@ -1,5 +1,3 @@
-import logging
-
 from random import shuffle
 
 # TODO: allow user to choose symbols or letters for suits and maybe mess with
@@ -152,11 +150,16 @@ class Dealer:
         self.__players = [player for player in players]
         self.__community_cards = []
 
+
         return
 
     @property
     def deck(self):
         return self.__deck
+
+    @property
+    def players(self):
+        return self.__players
 
     def burn_card(self):
         """Remove a Card object from the deck. Called when 'burning' a card on
@@ -195,7 +198,7 @@ class Dealer:
 
     def deal_to_players(self):
         """Deal two Cards to a Player."""
-        for player in self.__players:
+        for player in self.players:
             hole = []
             for i in range(2):
                 card = self.deal_card(player.id)
@@ -218,17 +221,17 @@ class Dealer:
         # NOTE: Currently unused
         """Print community_cards list."""
         cards = self.__community_cards
-        print(f"{self.which_street(len(cards)):8}:", end="")
-        [print(f" {card.id}", end="") for card in cards]
+        print(f"{self.which_street(len(cards)):>10}: ", end="")
+        print(cards, end="")
         line_break()
         return
 
     def show_all_players_hands(self):
         # NOTE: Currently unused
         """Print all Player's hole cards."""
-        for player in self.__players:
-            print(f"Player {player.id}:", end="")
-            [print(f" {card.id:2}", end="") for card in player.hole]
+        for player in self.players:
+            print(f"{'Player '+str(player.id):>10}: ", end="")
+            print(player.hole, end="")
             line_break()
         return
 
@@ -302,16 +305,17 @@ class HandRanker:
 
     def __repr__(self) -> str:
         hbr = self.hands_by_rank()
-        message = (
-            f"{'Board:':12}{str(self.comm_cards)}\n"
-            f"{'Hole Cards:':12}{str(self.hole)}\n"
-        )
-        if not hbr:
-            return f"Player {self.player.id} made no hands."
 
-        message += f"{'P'+str(self.player.id)+' hands':^20}\n"
-        for k, v in hbr.items():
-            message += f"{k+':':11} "
+        message = ""
+        # Uncomment this if you want to see board and hole from this object
+        # message = (
+        #     f"{'Board:':12}{str(self.comm_cards)}\n"
+        #     f"{'Hole Cards:':12}{str(self.hole)}\n"
+        # )
+
+        message += f"{'P'+str(self.player.id)+' Hands':-^22}\n"
+        for k, v in reversed(hbr.items()):
+            message += f"{k+':':>11} "
             # message += str([hand[0] for hand in v[0]])
             for hand in v[0]:
                 message += f"{str(hand[0])} "
@@ -607,25 +611,28 @@ class HandRanker:
         return matches
 
 
+class JudgeWinner:
+
+    def __init__():
+        return
+
+
 def main(d: Dealer):
 
-    # syntax: logging.debug/info/error("your statement here")
-    level = logging.DEBUG
-    fmt = "[%(levelname)s] %(asctime)s - %(message)s"
-    logging.basicConfig(level=level, format=fmt)
-
     d.deal_to_players()
-    # d.show_all_players_hands()
     d.deal_flop()
     # d.show_community_cards()
     d.deal_turn()
     # d.show_community_cards()
     d.deal_river()
-    # d.show_community_cards()
-    h = HandRanker(d.deck, players[0])
 
-    line_break()
-    print(h)
+    d.show_all_players_hands()
+    d.show_community_cards()
+
+    for player in d.players:
+        h = HandRanker(d.deck, player)
+        print(h)
+
     line_break()
 
 
