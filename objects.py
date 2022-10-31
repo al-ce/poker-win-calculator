@@ -314,11 +314,11 @@ class HandRanker:
             message += f"{k+':':11} "
             # message += str([hand[0] for hand in v[0]])
             for hand in v[0]:
-                message += str(hand)
+                message += f"{str(hand[0])} "
                 # message += str(hand[0])
             message += "\n"
 
-        return message
+        return message.strip()
 
     @property
     def player(self):
