@@ -314,9 +314,9 @@ class HandRanker:
             message += f"{k+':':11} "
             # message += str([hand[0] for hand in v[0]])
             for hand in v[0]:
-                message += str(hand[0])
+                message += str(hand)
+                # message += str(hand[0])
             message += "\n"
-
         return message
 
     @property
@@ -403,7 +403,7 @@ class HandRanker:
         for cards in self.suited.values():
             # If the length (cards[0]) of the suit count is 5, return the flush
             if cards[0] == 5:
-                return (cards[1],)
+                return [(cards[1], cards[1][0].rank)]
         return
 
     def check_full_house(self):
@@ -438,7 +438,7 @@ class HandRanker:
 
     def check_royal_flush(self):
         sf = self.straight_flush
-        if sf and sf[0].rank == 14:
+        if sf and sf[1] == 14:
             # Get rid of straight flush to avoid redundant hands.
             self.__straight_flush = None
             return sf
@@ -479,14 +479,19 @@ class HandRanker:
             if temp_ranks == would_be_straight:
                 straights.append(temp)
 
-        # If more than one straight was found, return the highest one.
+        if not straights:
+            return
+
+        # If more than one straight was found, return the highest nested list.
         if len(straights) > 1:
-            g = lambda cards: sum([card.rank for card in cards])
-            highest_straight = sorted(straights, key=g, reverse=True)[0]
-            return (highest_straight,)
-        elif straights:
-            return (straights[0],)
-        return
+            g = lambda cards: cards[0].rank
+            # g = lambda cards: sum([card.rank for card in cards])
+            straight = sorted(straights, key=g, reverse=True)[0]
+        # Elif only one straight was found, return the only nested list
+        else:
+            straight = straights[0]
+        straight = sorted(straight, key=lambda card: card.rank, reverse=True)
+        return [(straight, straight[0].rank)]
 
     def check_straight_flush(self):
         if self.straight and self.flush and self.straight == self.flush:
