@@ -318,13 +318,6 @@ class HandRanker:
                 # message += str(hand[0])
             message += "\n"
 
-            no = ["High Card", "Kicker", "Two Pair", "Pair"]
-            if k not in no:
-                print(message)
-                print(self.hands_by_rank())
-                input("")
-
-
         return message.strip()
 
     @property
