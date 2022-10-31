@@ -547,13 +547,14 @@ class HandRanker:
 
             # If we have entered it but its rank is lower, set it as the low
             # pair unless it's quads, which makes it irrelevant.
-
-            # NOTE: If the "low pair" is a pair, the length of the list of its
+            # If the "low pair" is a pair, the length of the list of its
             # cards will be 2, but 3 if the "low pair" is a set (e.g. if the
             # player makes two sets with the boards high and low pair)
 
-            if rank <= temp[match_type][1]:
-                if match_type != "quads":
+            if rank <= temp[match_type][1] and match_type != "quads":
+                # Only overwrite an existing low pair entry if the current
+                # match is higher than the old low pair.
+                if "low pair" not in temp or rank > temp["low pair"][1]:
                     temp["low pair"] = cards, rank
         return temp
 
