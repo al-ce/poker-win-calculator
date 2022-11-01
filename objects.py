@@ -157,7 +157,7 @@ class HandRanker:
             elif size == 2 and rank < temp:
                 hands["Low Pair"] = rank
 
-            elif size == 3 and rank > hands.get("Set"):
+            elif size == 3 and rank > hands.get("Set") and temp > 0:
                 hands["Low Pair"] = hands.get("High Pair")
                 hands["High Pair"] = temp
                 hands["Set"] = rank
@@ -204,12 +204,14 @@ def main(d: Dealer):
         for k, v in sorted_matches.items():
             print(k, ':', v)
 
-        if "Low Pair" in sorted_matches:
+        # if "Low Pair" in sorted_matches:
+        #     input("")
+        # if "Set" in sorted_matches and "High Pair" in sorted_matches:
+        #     input("")
+        if "Set" in sorted_matches and "Low Pair" in sorted_matches:
             input("")
-        if "Set" in sorted_matches:
-            input("")
-        if "Quads" in sorted_matches:
-            input("")
+        # if "Quads" in sorted_matches:
+        #     input("")
 
         line_break()
     line_break()
