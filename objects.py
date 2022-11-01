@@ -151,10 +151,12 @@ class HandRanker:
         for rank, size in matches.items():
             match_type = match_types[size]
             temp = hands.get(match_type)
-            if rank > temp:
+            if size == 2 and rank > temp:
                 hands[match_type] = rank
-                if size == 2:
-                    hands["Low Pair"] = temp
+                hands["Low Pair"] = temp
+            elif size == 2 and rank < temp:
+                hands["Low Pair"] = rank
+
             elif size == 3 and rank > hands.get("Set"):
                 hands["Low Pair"] = hands.get("High Pair")
                 hands["High Pair"] = temp
@@ -162,6 +164,9 @@ class HandRanker:
             elif size == 3 and rank < temp:
                 hands["Low Pair"] = hands.get("High Pair")
                 hands["High Pair"] = rank
+
+            elif rank > temp:
+                hands[match_type] = rank
 
         hands = self.add_hole_cards_to_hands(hands)
 
@@ -176,7 +181,7 @@ class HandRanker:
         if high_card not in matched_ranks:
             hands["High Card"] = high_card
 
-        return hands
+        return {k: v for k, v in hands.items() if v > 0}
 
 
 def main(d: Dealer):
@@ -193,9 +198,21 @@ def main(d: Dealer):
         print(h.hole)
         print(h.comm_cards)
         matches = h.matches_check(h.dealt)
+        print(matches)
         sorted_matches = h.sort_matches(matches)
-        print(sorted_matches)
 
+        for k, v in sorted_matches.items():
+            print(k, ':', v)
+
+        if "Low Pair" in sorted_matches:
+            input("")
+        if "Set" in sorted_matches:
+            input("")
+        if "Quads" in sorted_matches:
+            input("")
+
+        line_break()
+    line_break()
     line_break()
 
 
