@@ -124,10 +124,7 @@ class HandRanker:
         self.matches = self.matches_check(self.dealt)
 
         # TODO: Just make the dict all at once from functions
-        self.hands = {
-            "Low Card": player.hole[1],
-            "High Card": player.hole[0],
-        }
+        self.hands = {}
 
     def matches_check(self, cards: list):
         """Check for which cards match in among the hole and comm cards."""
@@ -143,6 +140,44 @@ class HandRanker:
         matches = {rank: size for rank, size in matches.items() if size > 1}
         return matches
 
+    def sort_matches(self, matches: dict):
+        match_types = {2: "High Pair", 3: "Set", 4: "Quads"}
+        hands = {
+            "Low Pair": 0,
+            "High Pair": 0,
+            "Set": 0,
+            "Quads": 0,
+        }
+        for rank, size in matches.items():
+            match_type = match_types[size]
+            temp = hands.get(match_type)
+            if rank > temp:
+                hands[match_type] = rank
+                if size == 2:
+                    hands["Low Pair"] = temp
+            elif size == 3 and rank > hands.get("Set"):
+                hands["Low Pair"] = hands.get("High Pair")
+                hands["High Pair"] = temp
+                hands["Set"] = rank
+            elif size == 3 and rank < temp:
+                hands["Low Pair"] = hands.get("High Pair")
+                hands["High Pair"] = rank
+
+        hands = self.add_hole_cards_to_hands(hands)
+
+        return hands
+
+    def add_hole_cards_to_hands(self, hands: dict):
+        matched_ranks = hands.values()
+        high_card = self.player.hole[0].rank
+        low_card = self.player.hole[1].rank
+        if low_card not in matched_ranks:
+            hands["Low Card"] = low_card
+        if high_card not in matched_ranks:
+            hands["High Card"] = high_card
+
+        return hands
+
 
 def main(d: Dealer):
 
@@ -157,7 +192,9 @@ def main(d: Dealer):
         h = HandRanker(d.community_cards, player)
         print(h.hole)
         print(h.comm_cards)
-        print(h.matches_check(h.dealt))
+        matches = h.matches_check(h.dealt)
+        sorted_matches = h.sort_matches(matches)
+        print(sorted_matches)
 
     line_break()
 
