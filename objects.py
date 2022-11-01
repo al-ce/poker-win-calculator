@@ -33,7 +33,7 @@ class Deck:
     def __init__(self):
         self.cards = self.initialize_deck()
 
-    def initialize_deck(self):
+    def initialize_deck(self) -> list:
         """Return a shuffled deck (randomized list of Cards). Called on each
         round."""
         deck = []
@@ -67,7 +67,7 @@ class Dealer:
     def burn_card(self):
         self.deck.pop()
 
-    def deal_card(self, location=0):
+    def deal_card(self, location=0) -> Card:
         card = self.deck.pop()
         card.location = location
         # Place card at the "bottom" of the deck so it can be used in
@@ -99,11 +99,11 @@ class Dealer:
         self.burn_card()
         self.deal_to_community_cards()
 
-    def get_new_deck(self):
+    def get_new_deck(self) -> list:
         """Returns a shuffled Deck of Cards."""
         return Deck().cards
 
-    def which_street(self, length: int):
+    def which_street(self, length: int) -> str:
         """Return which street is on display based on length of community cards"""
         return self.streets.get(str(length))
 
@@ -118,7 +118,6 @@ class HandRanker:
         self.player = player
         self.hole = player.hole
         self.comm_cards = community_cards
-        # NOTE: Do you need this?
         self.dealt = sorted(self.hole + self.comm_cards, reverse=True)
 
         self.matches = self.matches_check(self.dealt)
@@ -126,7 +125,22 @@ class HandRanker:
         # TODO: Just make the dict all at once from functions
         self.hands = {}
 
-    def matches_check(self, cards: list):
+
+    def flush_check(self, cards: list) -> Card:
+        suited_count = {}
+        for card in cards:
+            suit = card.suit
+            if suit in suited_count:
+                suited_count[suit] += 1
+            else:
+                suited_count[suit] = 1
+        flush = None
+        for suit, count in suited_count.items():
+            if count >= 5:
+                flush = [card for card in cards if card.suit == suit][0]
+        return flush
+
+    def matches_check(self, cards: list) -> dict:
         """Check for which cards match in among the hole and comm cards."""
 
         matches = {}
@@ -140,7 +154,7 @@ class HandRanker:
         matches = {rank: size for rank, size in matches.items() if size > 1}
         return matches
 
-    def sort_matches(self, matches: dict):
+    def sort_matches(self, matches: dict) -> dict:
         match_types = {2: "High Pair", 3: "Set", 4: "Quads"}
         hands = {
             "Low Pair": 0,
@@ -172,7 +186,7 @@ class HandRanker:
 
         return hands
 
-    def add_hole_cards_to_hands(self, hands: dict):
+    def add_hole_cards_to_hands(self, hands: dict) -> dict:
         matched_ranks = hands.values()
         high_card = self.player.hole[0].rank
         low_card = self.player.hole[1].rank
@@ -197,19 +211,25 @@ def main(d: Dealer):
         h = HandRanker(d.community_cards, player)
         print(h.hole)
         print(h.comm_cards)
-        matches = h.matches_check(h.dealt)
-        print(matches)
-        sorted_matches = h.sort_matches(matches)
 
-        for k, v in sorted_matches.items():
-            print(k, ':', v)
+        f = h.flush_check(h.dealt)
+        if f:
+            print(f)
+            input("")
+
+        # matches = h.matches_check(h.dealt)
+        # print(matches)
+        # sorted_matches = h.sort_matches(matches)
+
+        # for k, v in sorted_matches.items():
+        #     print(k, ':', v)
 
         # if "Low Pair" in sorted_matches:
         #     input("")
         # if "Set" in sorted_matches and "High Pair" in sorted_matches:
         #     input("")
-        if "Set" in sorted_matches and "Low Pair" in sorted_matches:
-            input("")
+        # if "Set" in sorted_matches and "Low Pair" in sorted_matches:
+        #     input("")
         # if "Quads" in sorted_matches:
         #     input("")
 
