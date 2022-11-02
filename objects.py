@@ -1,3 +1,4 @@
+# TODO: are you using this?
 from functools import total_ordering
 from random import shuffle
 
@@ -67,6 +68,30 @@ class Dealer:
     def burn_card(self):
         self.deck.pop()
 
+    def deal_test_hands(self):
+        """To test specific hands."""
+        def get_user_card_input(j: int):
+            some_list = []
+            for i in range(j):
+                c = input(f"  Card {i+1}:")
+                r = c[0]
+                s = c[1]
+                rank = Deck.rank.index(r)
+                card = Card(s, (r, rank + 2))
+                print(card)
+                print(card.rank)
+                some_list.append(card)
+            return some_list
+
+        for player in self.players:
+            print(f"Player {player.id}:")
+            hole = get_user_card_input(2)
+            player.hole = sorted(hole, reverse=True)
+
+        print("Board Cards:")
+        comm_cards = get_user_card_input(5)
+        self.community_cards = comm_cards
+
     def deal_card(self, location=0) -> Card:
         card = self.deck.pop()
         card.location = location
@@ -90,7 +115,7 @@ class Dealer:
     def deal_to_players(self):
         for player in self.players:
             hole = []
-            for i in range(2):
+            for _ in range(2):
                 card = self.deal_card(player.id)
                 hole.append(card)
             player.hole = sorted(hole, reverse=True)
@@ -117,16 +142,57 @@ class HandRanker:
         # value of one usually depends on calculating the previous ones.
         self.player = player
         self.hole = player.hole
+        # TODO:: Might not need the comm_cards attr
         self.comm_cards = community_cards
         self.dealt = sorted(self.hole + self.comm_cards, reverse=True)
 
-        self.matches = self.matches_check(self.dealt)
 
-        # TODO: Just make the dict all at once from functions
-        self.hands = {}
+    def get_hands(self, cards: list) -> dict:
+        hands = self.matches_check(cards)
+        hands = self.sort_matches(hands)
+        hands = self.full_house_check(hands)
+        hands = self.two_pair_check(hands)
 
+        straight = self.straight_check(cards)
+        flush = self.flush_check(cards)
+        straight_or_flush = self.which_straight_or_flush(straight, flush)
+        if straight_or_flush:
+            hands.update(straight_or_flush)
+        return hands
 
-    def flush_check(self, cards: list) -> Card:
+    def two_pair_check(self, hands: dict) -> dict:
+        if "Set" not in hands and "High Pair" in hands and "Low Pair" in hands:
+            hands["Two Pair"] = hands.get("High Pair")
+        return hands
+
+    def full_house_check(self, hands: dict) -> dict:
+        if "Set" in hands and "High Pair" in hands:
+            hands["Full House"] = hands.get("Set")
+        return hands
+
+    def which_straight_or_flush(self, straight: int, flush: int) -> dict:
+        if straight and straight == 14:
+            return {"Royal Flush": straight}
+        elif straight and flush:
+            return {"Straight Flush": straight}
+        elif straight:
+            return {"Straight": straight}
+        elif flush:
+            return {"Flush": flush}
+        return
+
+    def straight_check(self, cards: list) -> int:
+        ranks = [card.rank for card in cards]
+        for rank in ranks:
+            test_range = range(rank, rank - 5, -1)
+            if set(test_range).issubset(ranks):
+                return max(test_range)
+
+        ace_five = [2, 3, 4, 5, 14]
+        if set(ace_five).issubset(ranks):
+            return 5
+
+    def flush_check(self, cards: list) -> int:
         suited_count = {}
         for card in cards:
             suit = card.suit
@@ -137,7 +203,7 @@ class HandRanker:
         flush = None
         for suit, count in suited_count.items():
             if count >= 5:
-                flush = [card for card in cards if card.suit == suit][0]
+                flush = [card.rank for card in cards if card.suit == suit][0]
         return flush
 
     def matches_check(self, cards: list) -> dict:
@@ -162,6 +228,7 @@ class HandRanker:
             "Set": 0,
             "Quads": 0,
         }
+
         for rank, size in matches.items():
             match_type = match_types[size]
             temp = hands.get(match_type)
@@ -169,7 +236,10 @@ class HandRanker:
                 hands[match_type] = rank
                 hands["Low Pair"] = temp
             elif size == 2 and rank < temp:
-                hands["Low Pair"] = rank
+                low_pair = hands.get("Low Pair")
+                # Ensure a third pair doesn't overwrite the lower of first two
+                if low_pair == 0 or (low_pair != 0 and rank > low_pair):
+                    hands["Low Pair"] = rank
 
             elif size == 3 and rank > hands.get("Set") and temp > 0:
                 hands["Low Pair"] = hands.get("High Pair")
@@ -200,22 +270,33 @@ class HandRanker:
 
 def main(d: Dealer):
 
-    d.deal_to_players()
-    d.deal_flop()
-    # d.show_community_cards()
-    d.deal_turn()
-    # d.show_community_cards()
-    d.deal_river()
+    # d.deal_to_players()
+    # d.deal_flop()
+    # d.deal_turn()
+    # d.deal_river()
+    d.deal_test_hands()
 
     for player in d.players:
         h = HandRanker(d.community_cards, player)
+
         print(h.hole)
         print(h.comm_cards)
-
-        f = h.flush_check(h.dealt)
-        if f:
-            print(f)
+        print("**********")
+        hands = h.get_hands(h.dealt)
+        print(hands)
+        if "Two Pair" in hands:
             input("")
+        print("**********")
+
+        # s = h.straight_check(h.dealt)
+        # if s:
+        #     print(s)
+        #     input("")
+        #
+        # f = h.flush_check(h.dealt)
+        # if f:
+        #     print(f)
+        #     input("")
 
         # matches = h.matches_check(h.dealt)
         # print(matches)
