@@ -89,7 +89,7 @@ class Dealer:
         self.deck.pop()
 
     def deal_test_hands(self):
-        """To test specific hands."""
+        """Allow user to test specific hands."""
 
         def get_user_card_input(j: int) -> list:
             some_list = []
@@ -180,9 +180,17 @@ class HandCalculator:
 
         straight = self.straight_check(cards)
         flush = self.flush_check(cards)
-        straight_or_flush = self.which_straight_or_flush(straight, flush)
-        if straight_or_flush:
-            hands = straight_or_flush
+        _sf = self.which_straight_or_flush(straight, flush)
+
+        # Return a simplified dict for untie-able/split-pot hands
+        rare_flushes = ["Royal Flush", "Straight Flush"]
+        if _sf and any_in(rare_flushes, _sf, True):
+            return _sf
+        elif "Quads" in hands:
+            return {"Quads": hands.get("Quads")}
+        elif _sf:
+            return _sf
+
         return hands
 
     def which_straight_or_flush(self, straight: int, flush: int) -> dict:
@@ -223,12 +231,14 @@ class HandCalculator:
         return flush
 
     def two_pair_check(self, hands: dict) -> dict:
-        if "Set" not in hands and "High Pair" in hands and "Low Pair" in hands:
+        pairs = ["High Pair", "Low Pair"]
+        if "Set" not in hands and all_in(pairs, hands, True):
             hands["Two Pair"] = hands.get("High Pair")
         return hands
 
     def full_house_check(self, hands: dict) -> dict:
-        if "Set" in hands and "High Pair" in hands:
+        full_house = ["Set", "High Pair"]
+        if all_in(full_house, hands, True):
             hands["Full House"] = hands.get("Set")
         return hands
 
@@ -298,6 +308,7 @@ class HandCalculator:
         hands["Third Kicker"] = dealt_ranks[2] if length > 2 else 0
 
         return {k: v for k, v in hands.items() if v > 0}
+
 
 class WinCalculator:
 
