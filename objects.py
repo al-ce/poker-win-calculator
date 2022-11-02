@@ -132,7 +132,7 @@ class Dealer:
         return Deck().cards
 
     def which_street(self, length: int) -> str:
-        """Return which street is on display based on length of community cards"""
+        """Return which street is on display based on len of community cards"""
         return self.streets.get(str(length))
 
 
@@ -149,9 +149,9 @@ class HandCalculator:
         self.comm_cards = community_cards
         self.dealt = sorted(self.hole + self.comm_cards, reverse=True)
 
-        self.assign_hands_to_player()
+        self.report_hands_to_player()
 
-    def assign_hands_to_player(self):
+    def report_hands_to_player(self):
         self.player.hands = self.get_hands(self.dealt)
 
     def get_hands(self, cards: list) -> dict:
@@ -168,18 +168,9 @@ class HandCalculator:
         return hands
 
     def which_straight_or_flush(self, straight: int, flush: int) -> dict:
-        if (
-            flush
-            and straight == 14
-            and flush[-1] == straight
-            and flush[0] == straight - 4
-        ):
-            return {"Royal Flush": straight}
-        elif (
-            flush
-            and straight == flush[-1]
-            and straight - 4 == flush[0]
-            ):
+        if flush and straight == flush[-1] and straight - 4 == flush[0]:
+            if straight == 14:
+                return {"Royal Flush": straight}
             return {"Straight Flush": straight}
         elif straight:
             return {"Straight": straight}
@@ -209,7 +200,8 @@ class HandCalculator:
         flush = None
         for suit, count in suited_count.items():
             if count >= 5:
-                flush = sorted([card.rank for card in cards if card.suit == suit])
+                ranks = [card.rank for card in cards if card.suit == suit]
+                flush = sorted(ranks)
         return flush
 
     def two_pair_check(self, hands: dict) -> dict:
@@ -223,7 +215,7 @@ class HandCalculator:
         return hands
 
     def matches_check(self, cards: list) -> dict:
-        """Check for which cards match in among the hole and comm cards."""
+        """Check for which cards match among the hole and comm cards."""
 
         matches = {}
         for card in cards:
@@ -296,10 +288,6 @@ class WinCalculator:
         # self.determine_winner(top_hands)
 
     def determine_winner(self, top_hands: list) -> int:
-        if len(top_hands) == 1:
-            return top_hands[0][0]
-
-        hand_rank = top_hands[0][1]
         return
 
     def get_top_hands(self, hands: list) -> dict:
