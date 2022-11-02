@@ -266,7 +266,7 @@ class HandCalculator:
 
     def add_high_and_low_cards_to_hands(self, hands: dict) -> dict:
         # We only check against the matched ranks (ranks that are in pairs,
-        # sets, or quads) because kickers are irrelevant in straights/flushes
+        # sets, or quads) because kickers are irrelevant in straights/flushes.
         matched_ranks = hands.values()
         dealt_ranks = []
         for card in self.dealt:
