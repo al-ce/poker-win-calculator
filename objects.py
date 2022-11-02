@@ -50,6 +50,8 @@ class Player:
     def __init__(self, id: int):
         self.id = id
         self.hole = []
+        # Hands are given to this object by the HandCalculator
+        self.hands = None
 
     def __repr__(self):
         return f"Player {self.id}: {self.hole}"
@@ -70,7 +72,8 @@ class Dealer:
 
     def deal_test_hands(self):
         """To test specific hands."""
-        def get_user_card_input(j: int):
+
+        def get_user_card_input(j: int) -> list:
             some_list = []
             for i in range(j):
                 c = input(f"  Card {i+1}:")
@@ -146,6 +149,10 @@ class HandCalculator:
         self.comm_cards = community_cards
         self.dealt = sorted(self.hole + self.comm_cards, reverse=True)
 
+        self.assign_hands_to_player()
+
+    def assign_hands_to_player(self):
+        self.player.hands = self.get_hands(self.dealt)
 
     def get_hands(self, cards: list) -> dict:
         hands = self.matches_check(cards)
@@ -158,16 +165,6 @@ class HandCalculator:
         straight_or_flush = self.which_straight_or_flush(straight, flush)
         if straight_or_flush:
             hands.update(straight_or_flush)
-        return hands
-
-    def two_pair_check(self, hands: dict) -> dict:
-        if "Set" not in hands and "High Pair" in hands and "Low Pair" in hands:
-            hands["Two Pair"] = hands.get("High Pair")
-        return hands
-
-    def full_house_check(self, hands: dict) -> dict:
-        if "Set" in hands and "High Pair" in hands:
-            hands["Full House"] = hands.get("Set")
         return hands
 
     def which_straight_or_flush(self, straight: int, flush: int) -> dict:
@@ -205,6 +202,16 @@ class HandCalculator:
             if count >= 5:
                 flush = [card.rank for card in cards if card.suit == suit][0]
         return flush
+
+    def two_pair_check(self, hands: dict) -> dict:
+        if "Set" not in hands and "High Pair" in hands and "Low Pair" in hands:
+            hands["Two Pair"] = hands.get("High Pair")
+        return hands
+
+    def full_house_check(self, hands: dict) -> dict:
+        if "Set" in hands and "High Pair" in hands:
+            hands["Full House"] = hands.get("Set")
+        return hands
 
     def matches_check(self, cards: list) -> dict:
         """Check for which cards match in among the hole and comm cards."""
@@ -268,13 +275,61 @@ class HandCalculator:
         return {k: v for k, v in hands.items() if v > 0}
 
 
+class WinCalculator:
+    def __init__(self, players: list):
+        self.players = players
+        self.hands = sorted([(player.id, player.hands) for player in players])
+
+        top_hands = self.get_top_hands(self.hands)
+        for pid, pdata in top_hands:
+            print(pid)
+            print(f"  {pdata}")
+
+    def determine_winner(self, top_hands: list) -> int:
+        return
+
+    def get_top_hands(self, hands: list) -> dict:
+        rank_types = [
+            "Royal Flush",
+            "Straight Flush",
+            "Quads",
+            "Full House",
+            "Flush",
+            "Straight",
+            "Set",
+            "Two Pair",
+            "High Pair",
+            "High Card",
+        ]
+        sorted_players = {rank: [] for rank in rank_types}
+
+        print("__________")
+        print(self.hands)
+        print("+++++++++++++++++++")
+        for p_id, p_data in self.hands:
+            for rank in sorted_players:
+                if rank in p_data:
+                    sorted_players[rank].append((p_id, p_data))
+                    break
+
+        # Remove empty keys
+        sorted_players = {k: v for k, v in sorted_players.items() if v}
+        # Only return highest ranked players/top hands
+        for rank in rank_types:
+            if rank in sorted_players:
+                top_hands = sorted_players[rank]
+                return top_hands
+
+
 def main(d: Dealer):
 
-    # d.deal_to_players()
-    # d.deal_flop()
-    # d.deal_turn()
-    # d.deal_river()
-    d.deal_test_hands()
+    # TODO: make an 'auto-deal' func that automates these
+    d.deal_to_players()
+    d.deal_flop()
+    d.deal_turn()
+    d.deal_river()
+
+    # d.deal_test_hands()
 
     for player in d.players:
         h = HandCalculator(d.community_cards, player)
@@ -282,39 +337,42 @@ def main(d: Dealer):
         print(h.hole)
         print(h.comm_cards)
         print("**********")
-        hands = h.get_hands(h.dealt)
-        print(hands)
-        if "Two Pair" in hands:
-            input("")
-        print("**********")
+        # hands = h.get_hands(h.dealt)
 
-        # s = h.straight_check(h.dealt)
-        # if s:
-        #     print(s)
-        #     input("")
-        #
-        # f = h.flush_check(h.dealt)
-        # if f:
-        #     print(f)
-        #     input("")
+    w = WinCalculator(d.players)
+    print("----------")
 
-        # matches = h.matches_check(h.dealt)
-        # print(matches)
-        # sorted_matches = h.sort_matches(matches)
+    # print(hands)
+    # if "Two Pair" in hands:
+    #     input("")
+    # print("**********")
 
-        # for k, v in sorted_matches.items():
-        #     print(k, ':', v)
+    # s = h.straight_check(h.dealt)
+    # if s:
+    #     print(s)
+    #     input("")
+    #
+    # f = h.flush_check(h.dealt)
+    # if f:
+    #     print(f)
+    #     input("")
 
-        # if "Low Pair" in sorted_matches:
-        #     input("")
-        # if "Set" in sorted_matches and "High Pair" in sorted_matches:
-        #     input("")
-        # if "Set" in sorted_matches and "Low Pair" in sorted_matches:
-        #     input("")
-        # if "Quads" in sorted_matches:
-        #     input("")
+    # matches = h.matches_check(h.dealt)
+    # print(matches)
+    # sorted_matches = h.sort_matches(matches)
 
-        line_break()
+    # for k, v in sorted_matches.items():
+    #     print(k, ':', v)
+
+    # if "Low Pair" in sorted_matches:
+    #     input("")
+    # if "Set" in sorted_matches and "High Pair" in sorted_matches:
+    #     input("")
+    # if "Set" in sorted_matches and "Low Pair" in sorted_matches:
+    #     input("")
+    # if "Quads" in sorted_matches:
+    #     input("")
+
     line_break()
     line_break()
 
