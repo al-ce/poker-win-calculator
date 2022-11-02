@@ -268,23 +268,17 @@ class HandCalculator:
         # We only check against the matched ranks (ranks that are in pairs,
         # sets, or quads) because kickers are irrelevant in straights/flushes
         matched_ranks = hands.values()
-        dealt_ranks = [card.rank for card in self.player.hole + self.comm_cards]
-        i = 0
-        for rank in dealt_ranks:
-            high = max(dealt_ranks) + i
-            if rank == high and rank not in matched_ranks:
-                hands["High Card"] = high
-                dealt_ranks.remove(rank)
+        dealt_ranks = []
+        for card in self.dealt:
+            if card.rank not in matched_ranks:
+                dealt_ranks.append(card.rank)
 
-        i = 0
-        for rank in dealt_ranks:
-            # Since the High Card is removed, we now check for the 2nd kicker
-            low = max(dealt_ranks) + i
-            if rank == low and rank not in matched_ranks:
-                hands["Low Card"] = low
+        dealt_ranks.sort(reverse=True)
+        hands["High Card"] = dealt_ranks[0]
+        hands["Second Kicker"] = dealt_ranks[1]
+        hands["Third Kicker"] = dealt_ranks[2]
 
         return {k: v for k, v in hands.items() if v > 0}
-
 
 class WinCalculator:
 
@@ -309,6 +303,7 @@ class WinCalculator:
         for pid, pdata in top_hands:
             print(pid)
             print(f"  {pdata}")
+            input("")
 
         win = self.determine_winner(top_hands)
         if win:
@@ -319,7 +314,6 @@ class WinCalculator:
         # self.determine_winner(top_hands)
 
     def determine_winner(self, top_hands: list) -> list:
-
         def royal_flush_tie(top_hands: list, hand_type: str) -> list:
             """Multiple players have a royal flush can occur only if the royal
             flush is entirely on the board. So, there is no winner."""
