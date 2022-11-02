@@ -7,6 +7,24 @@ def line_break():
     print("\n", end="")
 
 
+def any_in(items: list, container: iter, are_in: bool) -> bool:
+    """Checks if any item from list 'items' is in list 'container'. Returns
+    True of False based on are_in param (are ANY items in/not here?)"""
+    for item in items:
+        if item in container and are_in:
+            return True
+    return False
+
+
+def all_in(items: list, container: iter, are_in: bool) -> bool:
+    """Checks if all items from list 'items' are in list 'container'. Returns
+    True of False based on are_in param (are ALL items in/not here?)"""
+    for item in items:
+        if item not in container and are_in:
+            return False
+    return True
+
+
 def debug_print(string):
     print(string)
 
