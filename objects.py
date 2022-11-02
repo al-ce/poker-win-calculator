@@ -260,18 +260,28 @@ class HandCalculator:
             elif rank > temp:
                 hands[match_type] = rank
 
-        hands = self.add_hole_cards_to_hands(hands)
+        hands = self.add_high_and_low_cards_to_hands(hands)
 
         return hands
 
-    def add_hole_cards_to_hands(self, hands: dict) -> dict:
+    def add_high_and_low_cards_to_hands(self, hands: dict) -> dict:
+        # We only check against the matched ranks (ranks that are in pairs,
+        # sets, or quads) because kickers are irrelevant in straights/flushes
         matched_ranks = hands.values()
-        high_card = self.player.hole[0].rank
-        low_card = self.player.hole[1].rank
-        if low_card not in matched_ranks:
-            hands["Low Card"] = low_card
-        if high_card not in matched_ranks:
-            hands["High Card"] = high_card
+        dealt_ranks = [card.rank for card in self.player.hole + self.comm_cards]
+        i = 0
+        for rank in dealt_ranks:
+            high = max(dealt_ranks) + i
+            if rank == high and rank not in matched_ranks:
+                hands["High Card"] = high
+                dealt_ranks.remove(rank)
+
+        i = 0
+        for rank in dealt_ranks:
+            # Since the High Card is removed, we now check for the 2nd kicker
+            low = max(dealt_ranks) + i
+            if rank == low and rank not in matched_ranks:
+                hands["Low Card"] = low
 
         return {k: v for k, v in hands.items() if v > 0}
 
