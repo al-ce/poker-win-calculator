@@ -133,7 +133,7 @@ class Dealer:
         return self.streets.get(str(length))
 
 
-class HandRanker:
+class HandCalculator:
     """Takes a Player object and a deck of dealt cards and calculates the
     Player's valid hands and ranks them."""
 
@@ -277,7 +277,7 @@ def main(d: Dealer):
     d.deal_test_hands()
 
     for player in d.players:
-        h = HandRanker(d.community_cards, player)
+        h = HandCalculator(d.community_cards, player)
 
         print(h.hole)
         print(h.comm_cards)
