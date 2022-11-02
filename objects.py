@@ -1,4 +1,4 @@
-# TODO: are you using this?
+# TODO: are you using this? Doesn't seem like it
 from functools import total_ordering
 from random import shuffle
 
@@ -164,7 +164,7 @@ class HandCalculator:
         flush = self.flush_check(cards)
         straight_or_flush = self.which_straight_or_flush(straight, flush)
         if straight_or_flush:
-            hands.update(straight_or_flush)
+            hands = straight_or_flush
         return hands
 
     def which_straight_or_flush(self, straight: int, flush: int) -> dict:
@@ -274,9 +274,10 @@ class HandCalculator:
                 dealt_ranks.append(card.rank)
 
         dealt_ranks.sort(reverse=True)
-        hands["High Card"] = dealt_ranks[0]
-        hands["Second Kicker"] = dealt_ranks[1]
-        hands["Third Kicker"] = dealt_ranks[2]
+        length = len(dealt_ranks)
+        hands["High Card"] = dealt_ranks[0] if dealt_ranks else 0
+        hands["Second Kicker"] = dealt_ranks[1] if length > 1 else 0
+        hands["Third Kicker"] = dealt_ranks[2] if length > 2 else 0
 
         return {k: v for k, v in hands.items() if v > 0}
 
@@ -302,15 +303,15 @@ class WinCalculator:
         top_hands = self.get_top_hands(self.hands)
         for pid, pdata in top_hands:
             print(pid)
-            print(f"  {pdata}")
-            input("")
+            print(f"  {pdata}\n")
+            # input("")
 
         win = self.determine_winner(top_hands)
         if win:
             print("--------")
             print(win)
             print("--------")
-            input("")
+            # input("")
         # self.determine_winner(top_hands)
 
     def determine_winner(self, top_hands: list) -> list:
