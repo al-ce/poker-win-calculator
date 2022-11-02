@@ -168,9 +168,18 @@ class HandCalculator:
         return hands
 
     def which_straight_or_flush(self, straight: int, flush: int) -> dict:
-        if straight and straight == 14:
+        if (
+            flush
+            and straight == 14
+            and flush[-1] == straight
+            and flush[0] == straight - 4
+        ):
             return {"Royal Flush": straight}
-        elif straight and flush:
+        elif (
+            flush
+            and straight == flush[-1]
+            and straight - 4 == flush[0]
+            ):
             return {"Straight Flush": straight}
         elif straight:
             return {"Straight": straight}
@@ -189,7 +198,7 @@ class HandCalculator:
         if set(ace_five).issubset(ranks):
             return 5
 
-    def flush_check(self, cards: list) -> int:
+    def flush_check(self, cards: list) -> list:
         suited_count = {}
         for card in cards:
             suit = card.suit
@@ -200,7 +209,7 @@ class HandCalculator:
         flush = None
         for suit, count in suited_count.items():
             if count >= 5:
-                flush = [card.rank for card in cards if card.suit == suit][0]
+                flush = sorted([card.rank for card in cards if card.suit == suit])
         return flush
 
     def two_pair_check(self, hands: dict) -> dict:
@@ -284,8 +293,13 @@ class WinCalculator:
         for pid, pdata in top_hands:
             print(pid)
             print(f"  {pdata}")
+        # self.determine_winner(top_hands)
 
     def determine_winner(self, top_hands: list) -> int:
+        if len(top_hands) == 1:
+            return top_hands[0][0]
+
+        hand_rank = top_hands[0][1]
         return
 
     def get_top_hands(self, hands: list) -> dict:
@@ -303,15 +317,11 @@ class WinCalculator:
         ]
         sorted_players = {rank: [] for rank in rank_types}
 
-        print("__________")
-        print(self.hands)
-        print("+++++++++++++++++++")
         for p_id, p_data in self.hands:
             for rank in sorted_players:
                 if rank in p_data:
                     sorted_players[rank].append((p_id, p_data))
                     break
-
         # Remove empty keys
         sorted_players = {k: v for k, v in sorted_players.items() if v}
         # Only return highest ranked players/top hands
