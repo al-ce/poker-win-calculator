@@ -175,7 +175,7 @@ class HandCalculator:
         elif straight:
             return {"Straight": straight}
         elif flush:
-            return {"Flush": flush}
+            return {"Flush": flush[-1]}
         return
 
     def straight_check(self, cards: list) -> int:
@@ -277,6 +277,20 @@ class HandCalculator:
 
 
 class WinCalculator:
+
+    rank_types = [
+        "Royal Flush",
+        "Straight Flush",
+        "Quads",
+        "Full House",
+        "Flush",
+        "Straight",
+        "Set",
+        "Two Pair",
+        "High Pair",
+        "High Card",
+    ]
+
     def __init__(self, players: list):
         self.players = players
         self.hands = sorted([(player.id, player.hands) for player in players])
@@ -285,25 +299,63 @@ class WinCalculator:
         for pid, pdata in top_hands:
             print(pid)
             print(f"  {pdata}")
+
+        win = self.determine_winner(top_hands)
+        if win:
+            print("--------")
+            print(win)
+            print("--------")
+            input("")
         # self.determine_winner(top_hands)
 
-    def determine_winner(self, top_hands: list) -> int:
-        return
+    def determine_winner(self, top_hands: list) -> list:
+
+        def royal_flush_tie(top_hands: list, hand_type: str) -> list:
+            """Multiple players have a royal flush can occur only if the royal
+            flush is entirely on the board. So, there is no winner."""
+            winners = []
+            for pid, data in top_hands:
+                winners.append((pid, "Royal Flush"))
+            return winners
+
+        def straight_flush_tie(top_hands: list, hand_type: str) -> list:
+            """If multiple players have a straight, a flush, or a straight
+            flush, the player(s) with the highest card in the hand win(s).
+            So, return a list of all players that have the highest card."""
+            high_card = 0
+
+            for pid, data in top_hands:
+                if data.get(hand_type) and data.get(hand_type) > high_card:
+                    high_card = data.get(hand_type)
+                    hand_type = hand_type
+
+            winners = []
+            for pid, data in top_hands:
+                if data.get(hand_type) == high_card:
+                    winners.append((pid, f"{hand_type}, {high_card} High"))
+            return winners
+
+        func_call = {
+            "Royal Flush": royal_flush_tie,
+            "Straight Flush": straight_flush_tie,
+            "Quads": print,
+            "Full House": print,
+            "Flush": straight_flush_tie,
+            "Straight": straight_flush_tie,
+            "Set": print,
+            "Two Pair": print,
+            "High Pair": print,
+            "High Card": print,
+        }
+
+        sample = top_hands[0][1]
+        for rank in self.rank_types:
+            if rank in sample:
+                winners = func_call[rank](top_hands, rank)
+                return winners
 
     def get_top_hands(self, hands: list) -> dict:
-        rank_types = [
-            "Royal Flush",
-            "Straight Flush",
-            "Quads",
-            "Full House",
-            "Flush",
-            "Straight",
-            "Set",
-            "Two Pair",
-            "High Pair",
-            "High Card",
-        ]
-        sorted_players = {rank: [] for rank in rank_types}
+        sorted_players = {rank: [] for rank in self.rank_types}
 
         for p_id, p_data in self.hands:
             for rank in sorted_players:
@@ -313,9 +365,9 @@ class WinCalculator:
         # Remove empty keys
         sorted_players = {k: v for k, v in sorted_players.items() if v}
         # Only return highest ranked players/top hands
-        for rank in rank_types:
+        for rank in self.rank_types:
             if rank in sorted_players:
-                top_hands = sorted_players[rank]
+                top_hands = sorted_players.get(rank)
                 return top_hands
 
 
