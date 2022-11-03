@@ -360,11 +360,33 @@ class WinCalculator:
         # self.determine_winner(top_hands)
 
     def determine_winner(self, top_hands: list) -> list:
+
+
         def split_pot_msg(winners: list) -> str:
             msg = "Split Pot -"
             for pid in winners:
                 msg += f" Player {pid},"
             return msg[:-1]
+
+        func_call = {
+            "Royal Flush": split_pot_msg,
+            "Straight Flush": split_pot_msg,
+            "Quads": split_pot_msg,
+            "Full House": print,
+            "Flush": split_pot_msg,
+            "Straight": split_pot_msg,
+            "Set": print,
+            "Two Pair": print,
+            "One Pair": print,
+            "High Card": print,
+        }
+
+        def tag_msg(hand_type: str, card_name: str) -> str:
+            # Tags to put at the end of the message based on hand type
+            _StrFl = ["Straight Flush", "Straight", "Flush"]
+            tag = " high" if hand_type in _StrFl else "s"
+            tag = f"\n{hand_type}, {card_name}{tag}"
+            tag = f"\n{hand_type}" if hand_type == "Royal Flush" else tag
 
         def tiebreaker_info(top_hnds: list, h_type: str) -> tuple:
             def get_highest_value(pdata: list, h_type: str) -> list:
@@ -388,48 +410,31 @@ class WinCalculator:
             card_name = self.card_ranks[high_card - 2]
             return winners, card_name
 
-        def no_kicker_ties(top_hands: list, hand_type: str) -> str:
+        def resolve_ties(top_hands: list, hand_type: str) -> str:
             # Return the winner/winners for hands that can't be tie-broken by a
             # kicker. Includes Royal + Straight Flush, Quads, Straights, Flush
 
             winners, card_name = tiebreaker_info(top_hands, hand_type)
 
-            def tag_msg(hand_type: str) -> str:
-                # Tags to put at the end of the message based on hand type
-                _StrFl = ["Straight Flush", "Straight", "Flush"]
-                tag = " high" if hand_type in _StrFl else "s"
-                tag = f"\n{hand_type}, {card_name}{tag}"
-                tag = f"\n{hand_type}" if hand_type == "Royal Flush" else tag
-
             if len(winners) > 1:
-                msg = split_pot_msg(winners)
+                # TODO: run hand-specific tie breakers. If still tied, return
+                # split pot
+                msg = func_call[hand_type](winners)
             else:
                 msg = f"Player {winners[0]} wins!"
 
-            tag = tag_msg(hand_type)
+            tag = tag_msg(hand_type, card_name)
             msg = f"{msg}{tag}"
             return msg
 
         def full_house_ties(top_hands: list, hand_type: str) -> str:
             return
 
-        func_call = {
-            "Royal Flush": no_kicker_ties,
-            "Straight Flush": no_kicker_ties,
-            "Quads": no_kicker_ties,
-            "Full House": print,
-            "Flush": no_kicker_ties,
-            "Straight": no_kicker_ties,
-            "Set": print,
-            "Two Pair": print,
-            "One Pair": print,
-            "High Card": print,
-        }
 
         sample = top_hands[0][1]
         for rank in self.rank_types:
             if rank in sample:
-                winners = func_call[rank](top_hands, rank)
+                winners = resolve_ties(top_hands, rank)
                 return winners
 
     def get_top_hands(self, hands: list) -> dict:
