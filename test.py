@@ -1,15 +1,17 @@
+
 # TODO: are you using this? Doesn't seem like it
 from functools import total_ordering
 from random import shuffle
 
 
+# Helper Functions
 def line_break():
     print("\n", end="")
 
 
 def any_in(items: list, container: iter, are_in: bool) -> bool:
-    """Checks if any item from list 'items' is in list 'container'. Returns
-    True of False based on are_in param (are ANY items in/not here?)"""
+    # Checks if any item from list 'items' is in list 'container'. Returns
+    # True of False based on are_in param (are ANY items in/not here?)
     for item in items:
         if item in container and are_in:
             return True
@@ -17,8 +19,8 @@ def any_in(items: list, container: iter, are_in: bool) -> bool:
 
 
 def all_in(items: list, container: iter, are_in: bool) -> bool:
-    """Checks if all items from list 'items' are in list 'container'. Returns
-    True of False based on are_in param (are ALL items in/not here?)"""
+    # Checks if all items from list 'items' are in list 'container'. Returns
+    # True of False based on are_in param (are ALL items in/not here?)
     for item in items:
         if item not in container and are_in:
             return False
@@ -46,15 +48,15 @@ class Card:
 
 
 class Deck:
-    rank = ["2", "3", "4", "5", "6", "7", "8", "9", "10", "J", "Q", "K", "A"]
+    rank = ["2", "3", "4", "5", "6", "7", "8", "9", "T", "J", "Q", "K", "A"]
     suits = ["C", "D", "S", "H"]
 
     def __init__(self):
         self.cards = self.initialize_deck()
 
     def initialize_deck(self) -> list:
-        """Return a shuffled deck (randomized list of Cards). Called on each
-        round."""
+        # Return a shuffled deck (randomized list of Cards). Called on each
+        # round.
         deck = []
         for suit in self.suits:
             for i in range(2, 15):
@@ -89,7 +91,7 @@ class Dealer:
         self.deck.pop()
 
     def deal_test_hands(self):
-        """Allow user to test specific hands."""
+        # Allow user to test specific hands.
 
         def get_user_card_input(j: int) -> list:
             some_list = []
@@ -99,8 +101,6 @@ class Dealer:
                 s = c[1]
                 rank = Deck.rank.index(r)
                 card = Card(s, (r, rank + 2))
-                print(card)
-                print(card.rank)
                 some_list.append(card)
             return some_list
 
@@ -146,17 +146,18 @@ class Dealer:
         self.deal_to_community_cards()
 
     def get_new_deck(self) -> list:
-        """Returns a shuffled Deck of Cards."""
+        # Returns a shuffled Deck of Cards.
         return Deck().cards
 
     def which_street(self, length: int) -> str:
-        """Return which street is on display based on len of community cards"""
+        # Return which street is on display based on len of community cards
+        # Useful for printing community cards one street at a time.
         return self.streets.get(str(length))
 
 
 class HandCalculator:
-    """Takes a Player object and a deck of dealt cards and calculates the
-    Player's valid hands and ranks them."""
+    # Takes a Player object and a deck of dealt cards and calculates the
+    # Player's valid hands and ranks them.
 
     def __init__(self, community_cards: list, player: Player):
         # The order of these attributes should be fixed, as calculating the
@@ -243,7 +244,7 @@ class HandCalculator:
         return hands
 
     def matches_check(self, cards: list) -> dict:
-        """Check for which cards match among the hole and comm cards."""
+        # Check for which cards match among the hole and comm cards.
 
         matches = {}
         for card in cards:
@@ -346,21 +347,21 @@ class WinCalculator:
         self.hands = sorted([(player.id, player.hands) for player in players])
 
         top_hands = self.get_top_hands(self.hands)
-        for pid, pdata in top_hands:
-            print(pid)
-            print(f"  {pdata}\n")
-            # input("")
 
-        win = self.determine_winner(top_hands)
+        # for pid, pdata in top_hands:
+        #     print("1++--++")
+        #     print(pid)
+        #     print(f"  {pdata}\n")
+        #     print("2++--++")
+
+        win = self.determine_winners(top_hands)
         if win:
-            print("--------")
+            print("1--****--")
             print(win)
-            print("--------")
-            # input("")
+            print("2--------")
         # self.determine_winner(top_hands)
 
-    def determine_winner(self, top_hands: list) -> list:
-
+    def determine_winners(self, top_hands: list) -> str:
         def get_highest_ranked_hand(pdata: list, hand_type: str) -> list:
             # Return the highest rank of a given hand type.
             # top_hands = [(int, {hand_type: rank})]
@@ -369,7 +370,7 @@ class WinCalculator:
             high_card = _list[0][1].get(hand_type)
             return high_card
 
-        def get_potential_winners(top_hands: list, hand_type: str, high_card: int) -> list:
+        def get_winners(top_hands: list, hand_type: str, high_card: int) -> list:
             # Return a list of all players that have the highest ranking card
             # of a given hand type.
             winners = []
@@ -388,7 +389,7 @@ class WinCalculator:
             # Return the winner/winners for hands that can't be tie-broken by a
             # kicker. Includes Royal + Straight Flush, Quads, Straights, Flush
             high_card = get_highest_ranked_hand(top_hands, hand_type)
-            winners = get_potential_winners(top_hands, hand_type, high_card)
+            winners = get_winners(top_hands, hand_type, high_card)
             card_rank_str = self.card_ranks[high_card - 2]
 
             # Tags to put at the end of the message based on hand type
@@ -402,13 +403,47 @@ class WinCalculator:
             else:
                 msg = f"Player {winners[0]} wins!"
 
+            # NOTE: might want to return a list of winners in addition to this
+            # string in case you want to log wins, split a pot, etc.
             return f"{msg}{tag}"
+
+
+        def one_pair_ties(top_hands: list, hand_type: str) -> str:
+            # NOTE: note this is a simpler returned str than no_kicker_ties
+            high_card = get_highest_ranked_hand(top_hands, hand_type)
+            winners = get_winners(top_hands, hand_type, high_card)
+            card_rank_str = self.card_ranks[high_card - 2]
+            if len(winners) > 1:
+                msg = split_pot_msg(winners)
+            else:
+                msg = f"Player {winners[0]} wins!"
+            return msg
+
+
+        def full_house_ties(top_hands: list, hand_type: str) -> str:
+            # Return the winner[s] of a full house tie. Check the higher set
+            # and then the higher pair. If both are tied, split the pot.
+
+            high_card = get_highest_ranked_hand(top_hands, hand_type)
+            pair_rank_int = get_highest_ranked_hand(top_hands, "One Pair")
+            winners = get_winners(top_hands, hand_type, high_card)
+            set_rank_str = self.card_ranks[high_card - 2]
+            pair_rank_str = self.card_ranks[pair_rank_int - 2]
+            if len(winners) > 1:
+                msg = one_pair_ties(top_hands, "One Pair")
+                print(f"{msg} {set_rank_str}s Full of {pair_rank_str}s")
+                input("")
+            else:
+                msg = f"Player {winners[0]} wins!"
+            return f"{msg}\n{set_rank_str}s Full of {pair_rank_str}s"
+
+
 
         func_call = {
             "Royal Flush": no_kicker_ties,
             "Straight Flush": no_kicker_ties,
             "Quads": no_kicker_ties,
-            "Full House": print,
+            "Full House": full_house_ties,
             "Flush": no_kicker_ties,
             "Straight": no_kicker_ties,
             "Set": print,
@@ -433,7 +468,7 @@ class WinCalculator:
                     break
         # Remove empty keys
         sorted_players = {k: v for k, v in sorted_players.items() if v}
-        # Only return highest ranked players/top hands
+        # Return the highest ranked players/top hands.
         for rank in self.rank_types:
             if rank in sorted_players:
                 top_hands = sorted_players.get(rank)
@@ -453,44 +488,13 @@ def main(d: Dealer):
     for player in d.players:
         h = HandCalculator(d.community_cards, player)
 
+        print("--main--")
         print(h.hole)
         print(h.comm_cards)
-        print("**********")
+        print("**********\n")
         # hands = h.get_hands(h.dealt)
 
     w = WinCalculator(d.players)
-    print("----------")
-
-    # print(hands)
-    # if "Two Pair" in hands:
-    #     input("")
-    # print("**********")
-
-    # s = h.straight_check(h.dealt)
-    # if s:
-    #     print(s)
-    #     input("")
-    #
-    # f = h.flush_check(h.dealt)
-    # if f:
-    #     print(f)
-    #     input("")
-
-    # matches = h.matches_check(h.dealt)
-    # print(matches)
-    # sorted_matches = h.sort_matches(matches)
-
-    # for k, v in sorted_matches.items():
-    #     print(k, ':', v)
-
-    # if "Low Pair" in sorted_matches:
-    #     input("")
-    # if "Set" in sorted_matches and "One Pair" in sorted_matches:
-    #     input("")
-    # if "Set" in sorted_matches and "Low Pair" in sorted_matches:
-    #     input("")
-    # if "Quads" in sorted_matches:
-    #     input("")
 
     line_break()
     line_break()
