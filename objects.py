@@ -391,18 +391,21 @@ class WinCalculator:
             winners = get_potential_winners(top_hands, hand_type, high_card)
             card_rank_str = self.card_ranks[high_card - 2]
 
-            # Tags to put at the end of the message based on hand type
-            highs = ["Straight Flush", "Straight", "Flush"]
-            tag = " high" if hand_type in highs else "s"
-            tag = f"\n{hand_type}, {card_rank_str}{tag}"
-            tag = f"\n{hand_type}" if hand_type == "Royal Flush" else tag
+            def tag_msg(hand_type: str) -> str:
+                # Tags to put at the end of the message based on hand type
+                highs = ["Straight Flush", "Straight", "Flush"]
+                tag = " high" if hand_type in highs else "s"
+                tag = f"\n{hand_type}, {card_rank_str}{tag}"
+                tag = f"\n{hand_type}" if hand_type == "Royal Flush" else tag
 
             if len(winners) > 1:
                 msg = split_pot_msg(winners)
             else:
                 msg = f"Player {winners[0]} wins!"
 
-            return f"{msg}{tag}"
+            tag = tag_msg(hand_type)
+            msg = f"{msg}{tag}"
+            return msg
 
         func_call = {
             "Royal Flush": no_kicker_ties,
