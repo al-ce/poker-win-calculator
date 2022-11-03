@@ -360,42 +360,45 @@ class WinCalculator:
         # self.determine_winner(top_hands)
 
     def determine_winner(self, top_hands: list) -> list:
-
-        def get_highest_ranked_hand(pdata: list, hand_type: str) -> list:
-            # Return the highest rank of a given hand type.
-            # top_hands = [(int, {hand_type: rank})]
-
-            _list = sorted(pdata, key=lambda d: d[1][hand_type], reverse=True)
-            high_card = _list[0][1].get(hand_type)
-            return high_card
-
-        def get_potential_winners(top_hands: list, hand_type: str, high_card: int) -> list:
-            # Return a list of all players that have the highest ranking card
-            # of a given hand type.
-            winners = []
-            for pid, data in top_hands:
-                if data.get(hand_type) == high_card:
-                    winners.append(pid)
-            return winners
-
         def split_pot_msg(winners: list) -> str:
             msg = "Split Pot -"
             for pid in winners:
                 msg += f" Player {pid},"
             return msg[:-1]
 
+        def tiebreaker_info(top_hnds: list, h_type: str) -> tuple:
+            def get_highest_value(pdata: list, h_type: str) -> list:
+                # Return the highest rank of a given hand type (h_type).
+                # top_hands = [(int, {hand_type: rank})]
+                _list = sorted(pdata, key=lambda d: d[1][h_type], reverse=True)
+                high_card = _list[0][1].get(h_type)
+                return high_card
+
+            def ptntl_wnnrs(top_hnds: list, h_type: str, hgh_crd: int) -> list:
+                # Return a list of potential winners, i.e. all players that
+                # have the highest ranking card of a given hand type (h_type)
+                winners = []
+                for pid, data in top_hnds:
+                    if data.get(h_type) == hgh_crd:
+                        winners.append(pid)
+                return winners
+
+            high_card = get_highest_value(top_hnds, h_type)
+            winners = ptntl_wnnrs(top_hnds, h_type, high_card)
+            card_name = self.card_ranks[high_card - 2]
+            return winners, card_name
+
         def no_kicker_ties(top_hands: list, hand_type: str) -> str:
             # Return the winner/winners for hands that can't be tie-broken by a
             # kicker. Includes Royal + Straight Flush, Quads, Straights, Flush
-            high_card = get_highest_ranked_hand(top_hands, hand_type)
-            winners = get_potential_winners(top_hands, hand_type, high_card)
-            card_rank_str = self.card_ranks[high_card - 2]
+
+            winners, card_name = tiebreaker_info(top_hands, hand_type)
 
             def tag_msg(hand_type: str) -> str:
                 # Tags to put at the end of the message based on hand type
-                highs = ["Straight Flush", "Straight", "Flush"]
-                tag = " high" if hand_type in highs else "s"
-                tag = f"\n{hand_type}, {card_rank_str}{tag}"
+                _StrFl = ["Straight Flush", "Straight", "Flush"]
+                tag = " high" if hand_type in _StrFl else "s"
+                tag = f"\n{hand_type}, {card_name}{tag}"
                 tag = f"\n{hand_type}" if hand_type == "Royal Flush" else tag
 
             if len(winners) > 1:
@@ -406,6 +409,9 @@ class WinCalculator:
             tag = tag_msg(hand_type)
             msg = f"{msg}{tag}"
             return msg
+
+        def full_house_ties(top_hands: list, hand_type: str) -> str:
+            return
 
         func_call = {
             "Royal Flush": no_kicker_ties,
