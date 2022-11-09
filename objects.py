@@ -99,17 +99,17 @@ class Dealer:
                 s = c[1]
                 rank = Deck.rank.index(r)
                 card = Card(s, (r, rank + 2))
-                print(card)
-                print(card.rank)
+                debug_print(card)
+                debug_print(card.rank)
                 some_list.append(card)
             return some_list
 
         for player in self.players:
-            print(f"Player {player.id}:")
+            debug_print(f"Player {player.id}:")
             hole = get_user_card_input(2)
             player.hole = sorted(hole, reverse=True)
 
-        print("Board Cards:")
+        debug_print("Board Cards:")
         comm_cards = get_user_card_input(5)
         self.community_cards = comm_cards
 
@@ -347,6 +347,7 @@ class WinCalculator:
 
         top_hands = self.get_top_hands(self.hands)
         for pid, pdata in top_hands:
+            debug_print(top_ranked_hand)
             print(pid)
             print(f"  {pdata}\n")
             # input("")
@@ -354,13 +355,39 @@ class WinCalculator:
         win = self.determine_winner(top_hands)
         if win:
             print("--------")
+            # TODO: this prints "win" mesage, but need to say how
             print(win)
             print("--------")
-            # input("")
+
+        # TODO: returns None, should return proper winner and winning hand etc.
+        return None
+        # input("")
         # self.determine_winner(top_hands)
 
-    def determine_winner(self, top_hands: list) -> list:
+    def get_top_hands(self, hands: list) -> tuple:
+        temp_rank_data = {rank: [] for rank in self.rank_types}
 
+        # for player id, all player's hands in self.hands
+        for p_id, p_data in self.hands:
+            # for the key 'rank' (value of []) in temp_rank_data
+            for rank in temp_rank_data:
+                # if the player has that rank in their hand
+                if rank in p_data:
+                    # append that player(s) & their data to the list, ignoring
+                    # all other rank keys
+                    temp_rank_data[rank].append((p_id, p_data))
+                    break
+        # Remove empty keys
+        sorted_players = {k: v for k, v in temp_rank_data.items() if v}
+        # Only return highest ranked players/top hands by finding the first
+        # non-empty key in the dict (which, since it's sorted, will be the
+        # highest). Returns a list of tuples:
+        # (player_id, {'hand_type': highest_ranked_card_in_that_hand})
+        # and the top ranked hand (str)
+        for rank in self.rank_types:
+            if rank in sorted_players:
+                top_hands = sorted_players.get(rank)
+                return top_hands, rank
 
         def split_pot_msg(winners: list) -> str:
             msg = "Split Pot -"
@@ -467,35 +494,35 @@ def main(d: Dealer):
     for player in d.players:
         h = HandCalculator(d.community_cards, player)
 
-        print(h.hole)
-        print(h.comm_cards)
-        print("**********")
+        debug_print(h.hole)
+        debug_print(h.comm_cards)
+        debug_print("**********")
         # hands = h.get_hands(h.dealt)
 
     w = WinCalculator(d.players)
-    print("----------")
+    debug_print("----------")
 
-    # print(hands)
+    # debug_print(hands)
     # if "Two Pair" in hands:
     #     input("")
-    # print("**********")
+    # debug_print("**********")
 
     # s = h.straight_check(h.dealt)
     # if s:
-    #     print(s)
+    #     debug_print(s)
     #     input("")
     #
     # f = h.flush_check(h.dealt)
     # if f:
-    #     print(f)
+    #     debug_print(f)
     #     input("")
 
     # matches = h.matches_check(h.dealt)
-    # print(matches)
+    # debug_print(matches)
     # sorted_matches = h.sort_matches(matches)
 
     # for k, v in sorted_matches.items():
-    #     print(k, ':', v)
+    #     debug_print(k, ':', v)
 
     # if "Low Pair" in sorted_matches:
     #     input("")
