@@ -345,14 +345,18 @@ class WinCalculator:
         self.players = players
         self.hands = sorted([(player.id, player.hands) for player in players])
 
-        top_hands = self.get_top_hands(self.hands)
+        top_hands, top_ranked_hand = self.get_top_hands(self.hands)
+
+        # TODO: Here's the top hands in the dealt cards
+        # Prints as many player's hands as those that have the highest ranked
+        # hand
         for pid, pdata in top_hands:
             debug_print(top_ranked_hand)
             print(pid)
             print(f"  {pdata}\n")
             # input("")
 
-        win = self.determine_winner(top_hands)
+        win = self.determine_winner(top_hands, top_ranked_hand)
         if win:
             print("--------")
             # TODO: this prints "win" mesage, but need to say how
@@ -389,6 +393,7 @@ class WinCalculator:
                 top_hands = sorted_players.get(rank)
                 return top_hands, rank
 
+    def determine_winner(self, top_hands: list, top_ranked_hand: str) -> list:
         def split_pot_msg(winners: list) -> str:
             msg = "Split Pot -"
             for pid in winners:
@@ -457,28 +462,9 @@ class WinCalculator:
         def full_house_ties(top_hands: list, hand_type: str) -> str:
             return
 
-
-        sample = top_hands[0][1]
-        for rank in self.rank_types:
-            if rank in sample:
-                winners = resolve_ties(top_hands, rank)
-                return winners
-
-    def get_top_hands(self, hands: list) -> dict:
-        sorted_players = {rank: [] for rank in self.rank_types}
-
-        for p_id, p_data in self.hands:
-            for rank in sorted_players:
-                if rank in p_data:
-                    sorted_players[rank].append((p_id, p_data))
-                    break
-        # Remove empty keys
-        sorted_players = {k: v for k, v in sorted_players.items() if v}
-        # Only return highest ranked players/top hands
-        for rank in self.rank_types:
-            if rank in sorted_players:
-                top_hands = sorted_players.get(rank)
-                return top_hands
+        winners = resolve_ties(top_hands, top_ranked_hand)
+        # TODO: if None, it's tied. Why was it tied, etc.
+        return winners
 
 
 def main(d: Dealer):
