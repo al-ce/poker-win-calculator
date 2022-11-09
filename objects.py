@@ -419,6 +419,7 @@ class WinCalculator:
             tag = " high" if hand_type in _StrFl else "s"
             tag = f"\n{hand_type}, {card_name}{tag}"
             tag = f"\n{hand_type}" if hand_type == "Royal Flush" else tag
+            return tag
 
         def tiebreaker_info(top_hnds: list, h_type: str) -> tuple:
             def get_highest_value(pdata: list, h_type: str) -> list:
