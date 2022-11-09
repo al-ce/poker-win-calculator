@@ -415,10 +415,13 @@ class WinCalculator:
 
         def tag_msg(hand_type: str, card_name: str) -> str:
             # Tags to put at the end of the message based on hand type
-            _StrFl = ["Straight Flush", "Straight", "Flush"]
-            tag = " high" if hand_type in _StrFl else "s"
-            tag = f"\n{hand_type}, {card_name}{tag}"
-            tag = f"\n{hand_type}" if hand_type == "Royal Flush" else tag
+            if hand_type == "Royal Flush":
+                return "\nRoyal Flush"
+            elif hand_type == "High Card":
+                return f"\n{card_name}-high"
+            _high = ["Straight Flush", "Straight", "Flush"]
+            suffix = " high" if hand_type in _high else "s"
+            tag = f"\n{hand_type}, {card_name}{suffix}"
             return tag
 
         def tiebreaker_info(top_hnds: list, h_type: str) -> tuple:
@@ -457,6 +460,7 @@ class WinCalculator:
                 msg = f"Player {winners[0]} wins!"
 
             tag = tag_msg(hand_type, card_name)
+            # TODO: If full house, add "full of x's" to tag
             msg = f"{msg}{tag}"
             return msg
 
