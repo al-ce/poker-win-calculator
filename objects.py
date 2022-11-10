@@ -445,34 +445,34 @@ class WinCalculator:
         """Resolve ties for straights, flushes, or quads."""
         if len(top_hands) > 1:
             msg = self.split_pot_msg(top_hands)
-            msg = self.tag_msg(hand_type, card_name, msg)
-            return msg
         else:
             player_id = top_hands[0][0]
             msg = f"Player {player_id} wins!"
-            msg = self.tag_msg(hand_type, card_name, msg)
-            return msg
+        msg = self.tag_msg(hand_type, card_name, msg)
+        return msg
 
-    def get_highest_value(self, top_hands: list, h_type: str) -> int:
+    def get_highest_value(self, top_hands: list, hand_type: str) -> int:
         # Return the highest rank of a given hand type (h_type).
         # top_hands = [(int, {hand_type: rank})]
-        _list = sorted(top_hands, key=lambda d: d[1][h_type], reverse=True)
-        high_card = _list[0][1].get(h_type)
+        _list = sorted(top_hands, key=lambda d: d[1][hand_type], reverse=True)
+        high_card = _list[0][1].get(hand_type)
         return high_card
 
-    def ptntl_wnnrs(self, top_hnds: list, h_type: str, hgh_crd: int) -> list:
+    def potential_winners(
+        self, top_hands: list, hand_type: str, high_card: int
+    ) -> list:
         # Return a list of potential winners, i.e. all players that
         # have the highest ranking card of a given hand type (h_type)
         winners = []
-        for pid, data in top_hnds:
-            if data.get(h_type) == hgh_crd:
+        for pid, data in top_hands:
+            if data.get(hand_type) == high_card:
                 winners.append((pid, data))
         return winners
 
-    def tiebreaker_info(self, top_hnds: list, h_type: str) -> tuple:
+    def tiebreaker_info(self, top_hnds: list, hand_type: str) -> tuple:
 
-        high_card = self.get_highest_value(top_hnds, h_type)
-        winners = self.ptntl_wnnrs(top_hnds, h_type, high_card)
+        high_card = self.get_highest_value(top_hnds, hand_type)
+        winners = self.potential_winners(top_hnds, hand_type, high_card)
         card_name = self.get_card_name(high_card)
         return winners, card_name
 
