@@ -1,5 +1,3 @@
-# TODO: are you using this? Doesn't seem like it
-from functools import total_ordering
 from random import shuffle
 
 
@@ -32,11 +30,10 @@ def none_in(items: list, container: iter) -> bool:
     return True
 
 
-def debug_print(string):
-    print(string)
+def debug_print(to_print):
+    print(to_print)
 
 
-@total_ordering
 class Card:
     def __init__(self, suit: str, rank: tuple):
         # id is used to concisely display the card
@@ -92,6 +89,12 @@ class Dealer:
         # List of Player() objects
         self.players = [player for player in players]
         self.community_cards = []
+
+    def print_round(self):
+        print("----------------------------------------")
+        print(f"Board:    {self.community_cards}")
+        [print(player) for player in players]
+        line_break()
 
     def burn_card(self):
         self.deck.pop()
@@ -176,6 +179,7 @@ class HandCalculator:
         self.dealt = sorted(self.hole + self.comm_cards, reverse=True)
 
         self.report_hands_to_player()
+
 
     def report_hands_to_player(self):
         self.player.hands = self.get_hands(self.dealt)
@@ -414,26 +418,23 @@ class WinCalculator:
         self.players = players
         self.hands = sorted([(player.id, player.hands) for player in players])
 
-        top_hands, top_ranked_hand = self.get_top_hands(self.hands)
+        self.top_hands, self.top_ranked_hand = self.get_top_hands(self.hands)
 
-        # TODO: Here's the top hands in the dealt cards
-        # Prints as many player's hands as those that have the highest ranked
-        # hand, and that hand (an attr for the Player obj)
-        for pid, pdata in top_hands:
-            debug_print(f"\\*\\{pid}\n\\*\\{self.players[pid - 1].highest_hand}")
-            print(f"  {pdata}\n")
+        self.win_results = self.resolve_ties(self.top_hands, self.top_ranked_hand)
 
-        win = self.resolve_ties(top_hands, top_ranked_hand)
-        if win:
-            print("--------")
-            # TODO: this prints "win" mesage, but need to say how.
-            # Also make print_msg its own method
-            print(win)
-            print("--------")
 
-        # TODO: returns None, should return proper winner and winning hand etc.
-        return None
-        # self.determine_winner(top_hands)
+    def results(self):
+        print(self.win_results)
+        line_break()
+        line_break()
+
+    def print_all_player_hands(self):
+        for pid, pdata in self.top_hands:
+            print(f"Player {pid}:")
+            for hand, rank in pdata.items():
+                print(f"  {hand}: {self.get_card_name(rank)}", end="")
+            line_break()
+
 
     # TODO: use this
     def designate_player_win_status(self, player_id):
@@ -612,7 +613,6 @@ class WinCalculator:
         msg += f"\n{card_name}-high{tag}"
         return msg
 
-
     def get_highest_value(self, top_hands: list, hand_type: str) -> int:
         # Return the highest rank of a given hand type (h_type).
         # top_hands = [(int, {hand_type: rank})]
@@ -671,54 +671,16 @@ def main(d: Dealer):
     d.deal_flop()
     d.deal_turn()
     d.deal_river()
+    d.print_round()
 
     # d.deal_test_hands()
 
     for player in d.players:
         h = HandCalculator(d.community_cards, player)
 
-        debug_print(h.hole)
-        debug_print(h.comm_cards)
-        debug_print("**********")
-        # hands = h.get_hands(h.dealt)
 
     w = WinCalculator(d.players)
-    debug_print("----------------------------------------")
-
-    # debug_print(hands)
-    # if "Two Pair" in hands:
-    #     input("")
-    # debug_print("**********")
-
-    # s = h.straight_check(h.dealt)
-    # if s:
-    #     debug_print(s)
-    #     input("")
-    #
-    # f = h.flush_check(h.dealt)
-    # if f:
-    #     debug_print(f)
-    #     input("")
-
-    # matches = h.matches_check(h.dealt)
-    # debug_print(matches)
-    # sorted_matches = h.sort_matches(matches)
-
-    # for k, v in sorted_matches.items():
-    #     debug_print(k, ':', v)
-
-    # if "Low Pair" in sorted_matches:
-    #     input("")
-    # if "Set" in sorted_matches and "One Pair" in sorted_matches:
-    #     input("")
-    # if "Set" in sorted_matches and "Low Pair" in sorted_matches:
-    #     input("")
-    # if "Quads" in sorted_matches:
-    #     input("")
-
-    line_break()
-    line_break()
-
+    w.results()
 
 i = 2
 players = [Player(i + 1) for i in range(i)]
