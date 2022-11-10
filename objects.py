@@ -7,20 +7,26 @@ def line_break():
     print("\n", end="")
 
 
-def any_in(items: list, container: iter, are_in: bool) -> bool:
+def any_in(items: list, container: iter) -> bool:
     """Checks if any item from list 'items' is in list 'container'. Returns
     True of False based on are_in param (are ANY items in/not here?)"""
     for item in items:
-        if item in container and are_in:
+        if item in container:
             return True
     return False
 
 
-def all_in(items: list, container: iter, are_in: bool) -> bool:
-    """Checks if all items from list 'items' are in list 'container'. Returns
-    True of False based on are_in param (are ALL items in/not here?)"""
+def all_in(items: list, container: iter) -> bool:
+    """Checks if all items from list 'items' are in list 'container'."""
     for item in items:
-        if item not in container and are_in:
+        if item not in container:
+            return False
+    return True
+
+def none_in(items: list, container: iter) -> bool:
+    """Checks that no items in the list 'items' are in the list 'container."""
+    for item in items:
+        if item in container:
             return False
     return True
 
@@ -234,7 +240,7 @@ class HandCalculator:
 
     def two_pair_check(self, hands: dict) -> dict:
         pairs = ["One Pair", "Low Pair"]
-        if "Set" not in hands and all_in(pairs, hands, True):
+        if "Set" not in hands and all_in(pairs, hands):
             two_pair_dict = {
                 "Two Pair": hands.get("One Pair"),
                 "Low Pair": hands.get("Low Pair"),
@@ -245,19 +251,21 @@ class HandCalculator:
         return hands
 
     def one_pair_check(self, hands: dict) -> dict:
-        others = ["Two Pair", "Set"]
-        if "One Pair" in hands and all_in(others, hands, False):
+        others = ["Two Pair", "Set", "Full House", "Quads"]
+        if "One Pair" in hands and none_in(others, hands):
             kickers = ["High Card", "Second Kicker", "Third Kicker"]
             one_pair_dict = {"One Pair": hands.get("One Pair")}
             for kicker in kickers:
                 if kicker in hands:
                     one_pair_dict[kicker] = hands.get(kicker)
+                    debug_print(one_pair_dict)
+                    input("*^*^*^*^*^*^*")
             return one_pair_dict
         return hands
 
     def full_house_or_set_check(self, hands: dict) -> dict:
         full_house = ["Set", "One Pair"]
-        if all_in(full_house, hands, True):
+        if all_in(full_house, hands):
             full_house_dict = {
                 "Full House": hands.get("Set"),
                 "One Pair": hands.get("One Pair"),
@@ -391,7 +399,8 @@ class WinCalculator:
         # Prints as many player's hands as those that have the highest ranked
         # hand, and that hand (an attr for the Player obj)
         for pid, pdata in top_hands:
-            debug_print(f"\\*\\{pid}\n\\*\\{self.players[pid - 1].highest_hand}")
+            debug_print(
+                f"\\*\\{pid}\n\\*\\{self.players[pid - 1].highest_hand}")
             print(f"  {pdata}\n")
             # input("")
 
@@ -408,6 +417,7 @@ class WinCalculator:
         # input("")
         # self.determine_winner(top_hands)
 
+    # TODO: use this
     def designate_player_win_status(self, player_id):
         """Designates whether a player won in a hand, including split pots."""
         self.players[player_id - 1].is_winner = True
@@ -461,10 +471,13 @@ class WinCalculator:
     def split_pot_msg(self, winners: list) -> str:
         msg = "Split Pot -"
         for player in winners:
-
             player_id = player[0]
             msg += f" Player {player_id},"
         return msg[:-1]
+
+    def announce_winner(self, winners_list: list) -> str:
+        player_id = winners_list[0][0]
+        return f"Player {player_id} wins!"
 
     def full_house_ties(self, top_hands: list, hand_type, card_name) -> str:
         """Resolve ties for a full house."""
@@ -472,11 +485,13 @@ class WinCalculator:
         # If that is also a tie, the pot is split.
 
         winners, pair_rank = self.tiebreaker_info(top_hands, "One Pair")
-        if len(winners) > 1:
-            msg = self.split_pot_msg(winners)
+        if len(top_hands) > 1:
+            if len(winners) > 1:
+                msg = self.split_pot_msg(winners)
+            else:
+                msg = self.announce_winner(winners)
         else:
-            player_id = winners[0][0]
-            msg = f"Player {player_id} wins!"
+            msg = self.announce_winner(top_hands)
         msg += f"\n{hand_type}, {card_name}s full of {pair_rank}s"
         return msg
 
@@ -485,9 +500,78 @@ class WinCalculator:
         if len(top_hands) > 1:
             msg = self.split_pot_msg(top_hands)
         else:
-            player_id = top_hands[0][0]
-            msg = f"Player {player_id} wins!"
+            msg = self.announce_winner(top_hands)
         msg = self.tag_msg(hand_type, card_name, msg)
+        return msg
+
+    def set_ties(self, top_hands: list, hand_type, card_name) -> str:
+        """Resolve ties for sets."""
+
+        tag = ""
+        if len(top_hands) > 1:
+            kickers = ["High Card", "Second Kicker"]
+            # If returning a list of players with the highest first/second
+            # kicker only returns one player, announce that kicker
+            for kicker in kickers:
+                winners, kicker_rank = self.tiebreaker_info(top_hands, kicker)
+                if len(winners) == 1:
+                    tag = f", {kicker_rank} kicker"
+                    msg = self.announce_winner(winners)
+                    break
+            # If it's ties all the way down, split the pot
+            else:
+                msg = self.split_pot_msg(top_hands)
+        else:
+            msg = self.announce_winner(top_hands)
+        msg += f"\n{hand_type} of {card_name}s{tag}"
+        return msg
+
+    def two_pair_ties(self, top_hands: list, hand_type, card_name) -> str:
+        """Resolve ties for two pairs."""
+
+        low_pair = top_hands[0][1]["Low Pair"]
+        low_pair = self.get_card_name(low_pair)
+        tag = ""
+        if len(top_hands) > 1:
+            kickers = ["Low Pair", "High Card"]
+            # If returning a list of players with the highest first/second
+            # kicker only returns one player, announce that kicker
+            for kicker in kickers:
+                winners, kicker_rank = self.tiebreaker_info(top_hands, kicker)
+                if len(winners) == 1:
+                    tag = f", {kicker_rank} kicker"
+                    msg = self.announce_winner(winners)
+                    break
+            # If it's ties all the way down, split the pot
+            else:
+                msg = self.split_pot_msg(top_hands)
+        else:
+            msg = self.announce_winner(top_hands)
+        msg += f"\n{hand_type} {card_name}s and {low_pair}s{tag}"
+        return msg
+
+    def one_pair_ties(self, top_hands: list, hand_type, card_name) -> str:
+        """Resolve ties for one pairs."""
+
+        tag = ""
+        if len(top_hands) > 1:
+            kickers = ["High Card", "Second Kicker", "Third Kicker"]
+            # If returning a list of players with the highest first/second
+            # kicker only returns one player, announce that kicker
+            for kicker in kickers:
+                winners, kicker_rank = self.tiebreaker_info(top_hands, kicker)
+                if len(winners) == 1:
+                    tag = f", {kicker_rank} kicker"
+                    msg = self.announce_winner(winners)
+                    break
+            # If it's ties all the way down, split the pot
+            else:
+                msg = self.split_pot_msg(top_hands)
+        else:
+            msg = self.announce_winner(top_hands)
+        msg += f"\nPair of {card_name}s{tag}"
+        debug_print(msg)
+        input("")
         return msg
 
     def get_highest_value(self, top_hands: list, hand_type: str) -> int:
@@ -526,9 +610,9 @@ class WinCalculator:
             "Full House": self.full_house_ties,
             "Flush": self._SFQ_ties,
             "Straight": self._SFQ_ties,
-            "Set": print,
-            "Two Pair": print,
-            "One Pair": print,
+            "Set": self.set_ties,
+            "Two Pair": self.two_pair_ties,
+            "One Pair": self.one_pair_ties,
             "High Card": print,
         }
 
