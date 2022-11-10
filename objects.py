@@ -23,6 +23,7 @@ def all_in(items: list, container: iter) -> bool:
             return False
     return True
 
+
 def none_in(items: list, container: iter) -> bool:
     """Checks that no items in the list 'items' are in the list 'container."""
     for item in items:
@@ -184,13 +185,31 @@ class HandCalculator:
         hands = self.matches_check(cards)
         hands = self.sort_matches(hands)
 
-        # The following hands don't use kickers to break ties, so we simplify
-        # the dict we pass on.
-        hands = self.full_house_or_set_check(hands)
-        hands = self.quads_check(hands)
-        hands = self.which_straight_or_flush(cards, hands)
-        hands = self.two_pair_check(hands)
-        hands = self.one_pair_check(hands)
+        quads = self.quads_check(hands)
+        if quads:
+            return quads
+
+        full_house = self.full_house_check(hands)
+        if full_house:
+            return full_house
+
+        _st_fl = self.which_straight_or_flush(cards, hands)
+        if _st_fl:
+            return _st_fl
+
+        set = self.set_check(hands)
+        if set:
+            return set
+
+        two_pair = self.two_pair_check(hands)
+        if two_pair:
+            return two_pair
+
+        one_pair = self.one_pair_check(hands)
+        if one_pair:
+            return one_pair
+        # If the function makes it here, the best hand is a high card, and all
+        # kickers may be needed to break a tie.
         return hands
 
     def which_straight_or_flush(self, cards: list, hands: dict) -> dict:
@@ -205,7 +224,7 @@ class HandCalculator:
             return {"Straight": straight}
         elif flush:
             return {"Flush": flush[-1]}
-        return hands
+        return None
 
     def straight_check(self, cards: list) -> int:
         ranks = [card.rank for card in cards]
@@ -236,11 +255,11 @@ class HandCalculator:
     def quads_check(self, hands: dict) -> dict:
         if "Quads" in hands:
             return {"Quads": hands.get("Quads")}
-        return hands
+        return None
 
     def two_pair_check(self, hands: dict) -> dict:
-        pairs = ["One Pair", "Low Pair"]
-        if "Set" not in hands and all_in(pairs, hands):
+        two_pairs = ["One Pair", "Low Pair"]
+        if "Set" not in hands and all_in(two_pairs, hands):
             two_pair_dict = {
                 "Two Pair": hands.get("One Pair"),
                 "Low Pair": hands.get("Low Pair"),
@@ -248,30 +267,22 @@ class HandCalculator:
                 "High Card": hands.get("High Card"),
             }
             return two_pair_dict
-        return hands
+        return None
 
     def one_pair_check(self, hands: dict) -> dict:
-        others = ["Two Pair", "Set", "Full House", "Quads"]
-        if "One Pair" in hands and none_in(others, hands):
+        pair_override = ["Two Pair", "Set", "Full House", "Quads"]
+        if "One Pair" in hands and none_in(pair_override, hands):
             kickers = ["High Card", "Second Kicker", "Third Kicker"]
             one_pair_dict = {"One Pair": hands.get("One Pair")}
             for kicker in kickers:
                 if kicker in hands:
                     one_pair_dict[kicker] = hands.get(kicker)
-                    debug_print(one_pair_dict)
-                    input("*^*^*^*^*^*^*")
             return one_pair_dict
-        return hands
+        return None
 
-    def full_house_or_set_check(self, hands: dict) -> dict:
-        full_house = ["Set", "One Pair"]
-        if all_in(full_house, hands):
-            full_house_dict = {
-                "Full House": hands.get("Set"),
-                "One Pair": hands.get("One Pair"),
-            }
-            return full_house_dict
-        elif "Set" in hands:
+    def set_check(self, hands: dict) -> dict:
+        set_override = ["Quads", "Flush", "Straight"]
+        if "Set" in hands and none_in(set_override, hands):
             # Don't need a third kicker for Set tiebreakers
             set_dict = {
                 "Set": hands.get("Set"),
@@ -279,7 +290,17 @@ class HandCalculator:
                 "Second Kicker": hands.get("Second Kicker"),
             }
             return set_dict
-        return hands
+        return None
+
+    def full_house_check(self, hands: dict) -> dict:
+        full_house = ["Set", "One Pair"]
+        if all_in(full_house, hands):
+            full_house_dict = {
+                "Full House": hands.get("Set"),
+                "One Pair": hands.get("One Pair"),
+            }
+            return full_house_dict
+        return None
 
     def matches_check(self, cards: list) -> dict:
         """Check for which cards match among the hole and comm cards."""
@@ -399,10 +420,8 @@ class WinCalculator:
         # Prints as many player's hands as those that have the highest ranked
         # hand, and that hand (an attr for the Player obj)
         for pid, pdata in top_hands:
-            debug_print(
-                f"\\*\\{pid}\n\\*\\{self.players[pid - 1].highest_hand}")
+            debug_print(f"\\*\\{pid}\n\\*\\{self.players[pid - 1].highest_hand}")
             print(f"  {pdata}\n")
-            # input("")
 
         win = self.resolve_ties(top_hands, top_ranked_hand)
         if win:
@@ -414,7 +433,6 @@ class WinCalculator:
 
         # TODO: returns None, should return proper winner and winning hand etc.
         return None
-        # input("")
         # self.determine_winner(top_hands)
 
     # TODO: use this
@@ -570,8 +588,6 @@ class WinCalculator:
         else:
             msg = self.announce_winner(top_hands)
         msg += f"\nPair of {card_name}s{tag}"
-        debug_print(msg)
-        input("")
         return msg
 
     def get_highest_value(self, top_hands: list, hand_type: str) -> int:
