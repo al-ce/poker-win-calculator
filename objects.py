@@ -174,27 +174,23 @@ class HandCalculator:
         self.player.hands = self.get_hands(self.dealt)
 
     def get_hands(self, cards: list) -> dict:
+        # Return a simplified dict based on player's hands
         hands = self.matches_check(cards)
         hands = self.sort_matches(hands)
-        hands = self.full_house_check(hands)
+
+        # The following hands don't use kickers to break ties, so we simplify
+        # the dict we pass on.
+        hands = self.full_house_or_set_check(hands)
+        hands = self.quads_check(hands)
+        hands = self.which_straight_or_flush(cards, hands)
         hands = self.two_pair_check(hands)
-
-        straight = self.straight_check(cards)
-        flush = self.flush_check(cards)
-        _sf = self.which_straight_or_flush(straight, flush)
-
-        # Return a simplified dict for untie-able/split-pot hands
-        rare_flushes = ["Royal Flush", "Straight Flush"]
-        if _sf and any_in(rare_flushes, _sf, True):
-            return _sf
-        elif "Quads" in hands:
-            return {"Quads": hands.get("Quads")}
-        elif _sf:
-            return _sf
-
+        hands = self.one_pair_check(hands)
         return hands
 
-    def which_straight_or_flush(self, straight: int, flush: int) -> dict:
+    def which_straight_or_flush(self, cards: list, hands: dict) -> dict:
+        straight = self.straight_check(cards)
+        flush = self.flush_check(cards)
+
         if flush and straight == flush[-1] and straight - 4 == flush[0]:
             if straight == 14:
                 return {"Royal Flush": straight}
@@ -203,7 +199,7 @@ class HandCalculator:
             return {"Straight": straight}
         elif flush:
             return {"Flush": flush[-1]}
-        return
+        return hands
 
     def straight_check(self, cards: list) -> int:
         ranks = [card.rank for card in cards]
@@ -231,16 +227,50 @@ class HandCalculator:
                 flush = sorted(ranks)
         return flush
 
+    def quads_check(self, hands: dict) -> dict:
+        if "Quads" in hands:
+            return {"Quads": hands.get("Quads")}
+        return hands
+
     def two_pair_check(self, hands: dict) -> dict:
         pairs = ["One Pair", "Low Pair"]
         if "Set" not in hands and all_in(pairs, hands, True):
-            hands["Two Pair"] = hands.get("One Pair")
+            two_pair_dict = {
+                "Two Pair": hands.get("One Pair"),
+                "Low Pair": hands.get("Low Pair"),
+                # High Card is the kicker in this situation
+                "High Card": hands.get("High Card"),
+            }
+            return two_pair_dict
         return hands
 
-    def full_house_check(self, hands: dict) -> dict:
+    def one_pair_check(self, hands: dict) -> dict:
+        others = ["Two Pair", "Set"]
+        if "One Pair" in hands and all_in(others, hands, False):
+            kickers = ["High Card", "Second Kicker", "Third Kicker"]
+            one_pair_dict = {"One Pair": hands.get("One Pair")}
+            for kicker in kickers:
+                if kicker in hands:
+                    one_pair_dict[kicker] = hands.get(kicker)
+            return one_pair_dict
+        return hands
+
+    def full_house_or_set_check(self, hands: dict) -> dict:
         full_house = ["Set", "One Pair"]
         if all_in(full_house, hands, True):
-            hands["Full House"] = hands.get("Set")
+            full_house_dict = {
+                "Full House": hands.get("Set"),
+                "One Pair": hands.get("One Pair"),
+            }
+            return full_house_dict
+        elif "Set" in hands:
+            # Don't need a third kicker for Set tiebreakers
+            set_dict = {
+                "Set": hands.get("Set"),
+                "High Card": hands.get("High Card"),
+                "Second Kicker": hands.get("Second Kicker"),
+            }
+            return set_dict
         return hands
 
     def matches_check(self, cards: list) -> dict:
@@ -289,11 +319,11 @@ class HandCalculator:
             elif rank > temp:
                 hands[match_type] = rank
 
-        hands = self.add_high_and_low_cards_to_hands(hands)
+        hands = self.add_kickers_to_hands(hands)
 
         return hands
 
-    def add_high_and_low_cards_to_hands(self, hands: dict) -> dict:
+    def add_kickers_to_hands(self, hands: dict) -> dict:
         # We only check against the matched ranks (ranks that are in pairs,
         # sets, or quads) because kickers are irrelevant in straights/flushes.
         matched_ranks = hands.values()
@@ -303,10 +333,19 @@ class HandCalculator:
                 dealt_ranks.append(card.rank)
 
         dealt_ranks.sort(reverse=True)
+        # The number of unique dealt ranks
         length = len(dealt_ranks)
         hands["High Card"] = dealt_ranks[0] if dealt_ranks else 0
-        hands["Second Kicker"] = dealt_ranks[1] if length > 1 else 0
-        hands["Third Kicker"] = dealt_ranks[2] if length > 2 else 0
+        kickers = ["Second", "Third", "Fourth", "Fifth"]
+        i = 1
+        for kicker in kickers:
+            hands[f"{kicker} Kicker"] = dealt_ranks[i] if length > i else 0
+            i += 1
+
+        # hands["Second Kicker"] = dealt_ranks[1] if length > 1 else 0
+        # hands["Third Kicker"] = dealt_ranks[2] if length > 2 else 0
+        # hands["Fourth Kicker"] = dealt_ranks[3] if length > 3 else 0
+        # hands["Fifth Kicker"] = dealt_ranks[4] if length > 4 else 0
 
         return {k: v for k, v in hands.items() if v > 0}
 
