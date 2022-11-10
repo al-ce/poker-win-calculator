@@ -70,6 +70,7 @@ class Player:
         self.hole = []
         # Hands are given to this object by the HandCalculator
         self.hands = None
+        self.highest_hand = None
 
     def __repr__(self):
         return f"Player {self.id}: {self.hole}"
@@ -349,17 +350,17 @@ class WinCalculator:
 
         # TODO: Here's the top hands in the dealt cards
         # Prints as many player's hands as those that have the highest ranked
-        # hand
+        # hand, and that hand (an attr for the Player obj)
         for pid, pdata in top_hands:
-            debug_print(top_ranked_hand)
-            print(pid)
+            debug_print(f"\\*\\{pid}\n\\*\\{self.players[pid - 1].highest_hand}")
             print(f"  {pdata}\n")
             # input("")
 
         win = self.determine_winner(top_hands, top_ranked_hand)
         if win:
             print("--------")
-            # TODO: this prints "win" mesage, but need to say how
+            # TODO: this prints "win" mesage, but need to say how.
+            # Also make print_msg its own method
             print(win)
             print("--------")
 
@@ -368,7 +369,19 @@ class WinCalculator:
         # input("")
         # self.determine_winner(top_hands)
 
+    def designate_player_win_status(self, player_id):
+        """Designates whether a player won in a hand, including split pots."""
+        self.players[player_id - 1].is_winner = True
+
+    def get_card_name(self, card_rank: int) -> str:
+        """Converts a card's rank by int to its corresponding str.
+        Relevant for face cards."""
+        return self.card_ranks[card_rank - 2]
+
     def get_top_hands(self, hands: list) -> tuple:
+        def set_player_highest_hand(player_id: int, hand_rank: str):
+            self.players[player_id - 1].highest_hand = hand_rank
+
         temp_rank_data = {rank: [] for rank in self.rank_types}
 
         # for player id, all player's hands in self.hands
@@ -378,9 +391,11 @@ class WinCalculator:
                 # if the player has that rank in their hand
                 if rank in p_data:
                     # append that player(s) & their data to the list, ignoring
-                    # all other rank keys
+                    # all other rank keys.
                     temp_rank_data[rank].append((p_id, p_data))
+                    set_player_highest_hand(p_id, rank)
                     break
+
         # Remove empty keys
         sorted_players = {k: v for k, v in temp_rank_data.items() if v}
         # Only return highest ranked players/top hands by finding the first
@@ -393,20 +408,64 @@ class WinCalculator:
                 top_hands = sorted_players.get(rank)
                 return top_hands, rank
 
+    def split_pot_msg(self, winners: list) -> str:
+        msg = "Split Pot -"
+        for player in winners:
+
+            player_id = player[0]
+            msg += f" Player {player_id},"
+        return msg[:-1]
+
+    def full_house_ties(self, top_hands: list) -> str:
+        # Full houses tied by the set are resolved by the pair in the FH.
+        # If that is also a tie, the pot is split.
+
+        set_rank = self.get_highest_value(top_hands, "Full House")
+        # Convert the card rank from int to corresponding str (e.g. 11 to Jack)
+        set_rank = self.get_card_name(set_rank)
+        winners, pair_rank = self.tiebreaker_info(top_hands, "One Pair")
+        if len(winners) > 1:
+            msg = self.split_pot_msg(winners)
+        else:
+            player_id = winners[0][0]
+            msg = f"Player {player_id} wins!"
+        msg += f"\n{set_rank}s full of {pair_rank}s"
+        return msg
+
+    def get_highest_value(self, top_hands: list, h_type: str) -> int:
+        # Return the highest rank of a given hand type (h_type).
+        # top_hands = [(int, {hand_type: rank})]
+        _list = sorted(top_hands, key=lambda d: d[1][h_type], reverse=True)
+        high_card = _list[0][1].get(h_type)
+        return high_card
+
+    def ptntl_wnnrs(self, top_hnds: list, h_type: str, hgh_crd: int) -> list:
+        # Return a list of potential winners, i.e. all players that
+        # have the highest ranking card of a given hand type (h_type)
+        winners = []
+        for pid, data in top_hnds:
+            if data.get(h_type) == hgh_crd:
+                winners.append((pid, data))
+        return winners
+
+    def tiebreaker_info(self, top_hnds: list, h_type: str) -> tuple:
+
+        high_card = self.get_highest_value(top_hnds, h_type)
+        winners = self.ptntl_wnnrs(top_hnds, h_type, high_card)
+        card_name = self.get_card_name(high_card)
+        card_name = self.card_ranks[high_card - 2]
+        return winners, card_name
+
+
     def determine_winner(self, top_hands: list, top_ranked_hand: str) -> list:
-        def split_pot_msg(winners: list) -> str:
-            msg = "Split Pot -"
-            for pid in winners:
-                msg += f" Player {pid},"
-            return msg[:-1]
 
         func_call = {
-            "Royal Flush": split_pot_msg,
-            "Straight Flush": split_pot_msg,
-            "Quads": split_pot_msg,
-            "Full House": print,
-            "Flush": split_pot_msg,
-            "Straight": split_pot_msg,
+            "Royal Flush": self.split_pot_msg,
+            "Straight Flush": self.split_pot_msg,
+            "Quads": self.split_pot_msg,
+            "Full House": self.full_house_ties,
+            "Flush": self.split_pot_msg,
+            "Straight": self.split_pot_msg,
             "Set": print,
             "Two Pair": print,
             "One Pair": print,
@@ -424,48 +483,23 @@ class WinCalculator:
             tag = f"\n{hand_type}, {card_name}{suffix}"
             return tag
 
-        def tiebreaker_info(top_hnds: list, h_type: str) -> tuple:
-            def get_highest_value(pdata: list, h_type: str) -> list:
-                # Return the highest rank of a given hand type (h_type).
-                # top_hands = [(int, {hand_type: rank})]
-                _list = sorted(pdata, key=lambda d: d[1][h_type], reverse=True)
-                high_card = _list[0][1].get(h_type)
-                return high_card
-
-            def ptntl_wnnrs(top_hnds: list, h_type: str, hgh_crd: int) -> list:
-                # Return a list of potential winners, i.e. all players that
-                # have the highest ranking card of a given hand type (h_type)
-                winners = []
-                for pid, data in top_hnds:
-                    if data.get(h_type) == hgh_crd:
-                        winners.append(pid)
-                return winners
-
-            high_card = get_highest_value(top_hnds, h_type)
-            winners = ptntl_wnnrs(top_hnds, h_type, high_card)
-            card_name = self.card_ranks[high_card - 2]
-            return winners, card_name
-
         def resolve_ties(top_hands: list, hand_type: str) -> str:
             # Return the winner/winners for hands that can't be tie-broken by a
             # kicker. Includes Royal + Straight Flush, Quads, Straights, Flush
 
-            winners, card_name = tiebreaker_info(top_hands, hand_type)
+            winners, card_name = self.tiebreaker_info(top_hands, hand_type)
 
             if len(winners) > 1:
                 # TODO: run hand-specific tie breakers. If still tied, return
                 # split pot
                 msg = func_call[hand_type](winners)
             else:
-                msg = f"Player {winners[0]} wins!"
+                player_id = winners[0][0]
+                msg = f"Player {player_id} wins!"
 
             tag = tag_msg(hand_type, card_name)
-            # TODO: If full house, add "full of x's" to tag
             msg = f"{msg}{tag}"
             return msg
-
-        def full_house_ties(top_hands: list, hand_type: str) -> str:
-            return
 
         winners = resolve_ties(top_hands, top_ranked_hand)
         # TODO: if None, it's tied. Why was it tied, etc.
@@ -491,7 +525,7 @@ def main(d: Dealer):
         # hands = h.get_hands(h.dealt)
 
     w = WinCalculator(d.players)
-    debug_print("----------")
+    debug_print("----------------------------------------")
 
     # debug_print(hands)
     # if "Two Pair" in hands:
