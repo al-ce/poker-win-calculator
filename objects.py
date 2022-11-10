@@ -1,8 +1,30 @@
 from random import shuffle
+from getkey import getkey
+from os import system
+from string import digits
+import shutil
+
+
+def print_centre(s):
+    print(s.center(shutil.get_terminal_size().columns))
+
+def print_lm(s):
+    """Print with a left margin of n"""
+    n = 4
+    print(" " * n + s)
+
+def quit_cli():
+    clear()
+    quit()
 
 
 def line_break():
     print("\n", end="")
+
+
+def clear():
+    """Clear the terminal screen."""
+    return system("clear")
 
 
 def any_in(items: list, container: iter) -> bool:
@@ -90,10 +112,17 @@ class Dealer:
         self.players = [player for player in players]
         self.community_cards = []
 
+    def get_round_info(self):
+        info = "----------------------------------------\n"\
+        f"Board:    {self.community_cards}\n"
+        for player in self.players:
+            info += f"{player}\n"
+        return info
+
     def print_round(self):
         print("----------------------------------------")
         print(f"Board:    {self.community_cards}")
-        [print(player) for player in players]
+        [print(player) for player in self.players]
         line_break()
 
     def burn_card(self):
@@ -105,9 +134,9 @@ class Dealer:
         def get_user_card_input(j: int) -> list:
             some_list = []
             for i in range(j):
-                c = input(f"  Card {i+1}:")
-                r = c[0]
-                s = c[1]
+                c = input(f"  Card {i+1}: ")
+                r = "10" if c[0] == "1" else c[0]
+                s = c[2] if c[1] == "0" else c[1]
                 rank = Deck.rank.index(r)
                 card = Card(s, (r, rank + 2))
                 debug_print(card)
@@ -132,6 +161,13 @@ class Dealer:
         # know whether it's really in the deck (-1) or elsewhere (0, 1, 2, ...)
         self.deck.insert(0, card)
         return card
+
+    def deal_full_round(self):
+        """Deal to all players, deal all community cards to the board."""
+        self.deal_to_players()
+        self.deal_flop()
+        self.deal_turn()
+        self.deal_river()
 
     def deal_flop(self):
         self.burn_card()
@@ -177,9 +213,6 @@ class HandCalculator:
         # TODO:: Might not need the comm_cards attr
         self.comm_cards = community_cards
         self.dealt = sorted(self.hole + self.comm_cards, reverse=True)
-
-        self.report_hands_to_player()
-
 
     def report_hands_to_player(self):
         self.player.hands = self.get_hands(self.dealt)
@@ -375,11 +408,6 @@ class HandCalculator:
             hands[f"{kicker} Kicker"] = dealt_ranks[i] if length > i else 0
             i += 1
 
-        # hands["Second Kicker"] = dealt_ranks[1] if length > 1 else 0
-        # hands["Third Kicker"] = dealt_ranks[2] if length > 2 else 0
-        # hands["Fourth Kicker"] = dealt_ranks[3] if length > 3 else 0
-        # hands["Fifth Kicker"] = dealt_ranks[4] if length > 4 else 0
-
         return {k: v for k, v in hands.items() if v > 0}
 
 
@@ -420,13 +448,16 @@ class WinCalculator:
 
         self.top_hands, self.top_ranked_hand = self.get_top_hands(self.hands)
 
-        self.win_results = self.resolve_ties(self.top_hands, self.top_ranked_hand)
+        self.win_results = self.resolve_ties(
+            self.top_hands, self.top_ranked_hand)
 
-
-    def results(self):
+    def print_results(self):
         print(self.win_results)
         line_break()
         line_break()
+
+    def get_results(self):
+        return self.win_results
 
     def print_all_player_hands(self):
         for pid, pdata in self.top_hands:
@@ -434,7 +465,6 @@ class WinCalculator:
             for hand, rank in pdata.items():
                 print(f"  {hand}: {self.get_card_name(rank)}", end="")
             line_break()
-
 
     # TODO: use this
     def designate_player_win_status(self, player_id):
@@ -558,7 +588,7 @@ class WinCalculator:
             for kicker in kickers:
                 winners, kicker_rank = self.tiebreaker_info(top_hands, kicker)
                 if len(winners) == 1:
-                    tag = f", {kicker_rank} kicker"
+                    tag = f", {kicker_rank} kicker" if kicker_rank != "Low Pair" else ""
                     msg = self.announce_winner(winners)
                     break
             # If it's ties all the way down, split the pot
@@ -596,7 +626,8 @@ class WinCalculator:
 
         tag = ""
         if len(top_hands) > 1:
-            kickers = ["Second Kicker", "Third Kicker", "Fourth Kicker", "Fifth Kicker"]
+            kickers = ["Second Kicker", "Third Kicker",
+                       "Fourth Kicker", "Fifth Kicker"]
             # If returning a list of players with the highest first/second
             # kicker only returns one player, announce that kicker
             for kicker in kickers:
@@ -664,27 +695,114 @@ class WinCalculator:
         return msg
 
 
-def main(d: Dealer):
+class CLI:
+    header = "Texas Holdem Hand Wins Calculator"
 
-    # TODO: make an 'auto-deal' func that automates these
-    d.deal_to_players()
-    d.deal_flop()
-    d.deal_turn()
-    d.deal_river()
-    d.print_round()
+    menu_options = "(q)uit (r)andom (b)ack"
+    top_bar_msg = ""
+    hand_printout = ""
 
-    # d.deal_test_hands()
+    def print_header(self):
+        clear()
+        line_break()
+        print_centre(self.header)
+        line_break()
+        print_centre(self.menu_options)
+        line_break()
+        print_lm(self.top_bar_msg)
 
-    for player in d.players:
-        h = HandCalculator(d.community_cards, player)
+    def random_header(self):
+        self.print_header()
+        hand_printout = self.hand_printout.split("\n")
+        for line in hand_printout:
+            print_lm(line)
+
+    def clear_top_bar(self):
+        self.top_bar_msg = ''
+
+    def clear_hand_printout(self):
+        self.hand_printout = ''
+
+    def menu(self):
+        while True:
+            self.print_header()
+            usr_in = getkey().lower()
+            if usr_in == "q":
+                quit_cli()
+            elif usr_in == "r":
+                self.deal_random_hand()
+            elif usr_in == "b":
+                return self.menu()
+        return
+
+    def deal_random_hand(self):
+        self.top_bar_msg = "Please enter a digit 1-9, (q)uit, or (b)ack to main menu"
+        self.random_header()
+        tot_players = getkey().lower()
+        while True:
+            if tot_players == "q":
+                quit_cli()
+            elif tot_players == "b":
+                self.clear_top_bar()
+                self.clear_hand_printout()
+                return self.menu()
+            elif tot_players == "" or tot_players not in digits:
+                self.top_bar_msg = "Please enter a digit 1-9, (q)uit, or (b)ack to main menu"
+                return self.deal_random_hand()
+            elif tot_players in digits and int(tot_players) < 1:
+                return self.deal_random_hand()
+
+            self.top_bar_msg = f"Number of players: {tot_players}"
+            # Create as many Player objects as needed
+            tot_players = int(tot_players)
+            players = [Player(i + 1) for i in range(tot_players)]
+            deal = Dealer(players)
+            # Deal all cards to players and to the board
+            deal.deal_full_round()
+
+            # Store the round info (board cards + player cards)
+            round_info = deal.get_round_info()
+            # Print blank space so results always print in the same place
+            round_info += (f"\n" * (9 - tot_players))
+
+            for player in deal.players:
+                h = HandCalculator(deal.community_cards, player)
+                h.report_hands_to_player()
+            w = WinCalculator(deal.players)
+            results = w.get_results()
+
+            self.clear_hand_printout()
+            self.hand_printout += f"{round_info}\n{results}"
+            self.random_header()
+            tot_players = getkey().lower()
+        return
 
 
-    w = WinCalculator(d.players)
-    w.results()
+if __name__ == "__main__":
+    run = CLI()
+    run.menu()
 
-i = 2
-players = [Player(i + 1) for i in range(i)]
-
-for i in range(200000):
-    d = Dealer(players)
-    main(d)
+# def main(d: Dealer):
+#
+#     # TODO: make an 'auto-deal' func that automates these
+#     d.deal_to_players()
+#     d.deal_flop()
+#     d.deal_turn()
+#     d.deal_river()
+#     d.print_round()
+#
+#     # d.deal_test_hands()
+#
+#     for player in d.players:
+#         h = HandCalculator(d.community_cards, player)
+#
+#     w = WinCalculator(d.players)
+#     w.results()
+#
+#
+# i = 2
+# players = [Player(i + 1) for i in range(i)]
+#
+# for i in range(200000):
+#     d = Dealer(players)
+#     main(d)
