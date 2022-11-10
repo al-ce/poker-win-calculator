@@ -590,6 +590,29 @@ class WinCalculator:
         msg += f"\nPair of {card_name}s{tag}"
         return msg
 
+    def high_card_ties(self, top_hands: list, hand_type, card_name) -> str:
+        """Resolve ties for high cards."""
+
+        tag = ""
+        if len(top_hands) > 1:
+            kickers = ["Second Kicker", "Third Kicker", "Fourth Kicker", "Fifth Kicker"]
+            # If returning a list of players with the highest first/second
+            # kicker only returns one player, announce that kicker
+            for kicker in kickers:
+                winners, kicker_rank = self.tiebreaker_info(top_hands, kicker)
+                if len(winners) == 1:
+                    tag = f", {kicker_rank} kicker"
+                    msg = self.announce_winner(winners)
+                    break
+            # If it's ties all the way down, split the pot
+            else:
+                msg = self.split_pot_msg(top_hands)
+        else:
+            msg = self.announce_winner(top_hands)
+        msg += f"\n{card_name}-high{tag}"
+        return msg
+
+
     def get_highest_value(self, top_hands: list, hand_type: str) -> int:
         # Return the highest rank of a given hand type (h_type).
         # top_hands = [(int, {hand_type: rank})]
@@ -629,7 +652,7 @@ class WinCalculator:
             "Set": self.set_ties,
             "Two Pair": self.two_pair_ties,
             "One Pair": self.one_pair_ties,
-            "High Card": print,
+            "High Card": self.high_card_ties,
         }
 
         # Gather the first round of relevant info. Some of the tiebreaking info
