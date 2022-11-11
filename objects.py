@@ -1,7 +1,7 @@
 import shutil
 import atexit
 from random import shuffle
-from getkey import getkey
+from getkey import getkey, keys
 from os import system
 from string import digits
 
@@ -12,6 +12,9 @@ cursor.hide()  # Hides the cursor
 
 atexit.register(cursor.show)  # Make sure cursor.show() is called
 # when exiting
+
+rank = ["2", "3", "4", "5", "6", "7", "8", "9", "10", "J", "Q", "K", "A"]
+suits = ["C", "D", "S", "H"]
 
 
 def print_centre(s):
@@ -27,6 +30,11 @@ def print_lm(s):
 def quit_cli():
     clear()
     exit()
+
+
+def key_input():
+    usr_in = getkey().upper()
+    return usr_in
 
 
 def line_break():
@@ -68,8 +76,6 @@ def debug_print(to_print):
 
 
 def all_card_combos():
-    rank = ["2", "3", "4", "5", "6", "7", "8", "9", "10", "J", "Q", "K", "A"]
-    suits = ["C", "D", "S", "H"]
     return [f"{r}{s}" for r in rank for s in suits]
 
 
@@ -759,34 +765,37 @@ class CLI:
     def menu(self):
         while True:
             self.print_header()
-            usr_in = getkey().lower()
-            if usr_in == "q":
+            usr_in = key_input()
+            if usr_in == "Q":
                 quit_cli()
-            elif usr_in == "r":
+            elif usr_in == "R":
                 self.deal_hand("random")
-            elif usr_in == "t":
+            elif usr_in == "T":
                 self.deal_hand("test")
-            elif usr_in == "m":
+            elif usr_in == "M":
                 return self.menu()
+        return
+
+    def deal_test_hands(self):
         return
 
     def deal_hand(self, deal_type: str):
         """Deal a random or custom hand based on deal_type param."""
         self.set_top_bar(self.tot_player_msg)
         self.deal_header()
-        tot_players = getkey().lower()
+        tot_players = key_input()
         while True:
-            if tot_players == "q":
+            if tot_players == "Q":
                 quit_cli()
-            elif tot_players == "t":
+            elif tot_players == "T":
                 self.clear_top_bar()
                 self.clear_hand_printout()
                 return self.deal_hand("test")
-            elif tot_players == "r":
+            elif tot_players == "R":
                 self.clear_top_bar()
                 self.clear_hand_printout()
                 return self.deal_hand("random")
-            elif tot_players == "m":
+            elif tot_players == "M":
                 self.clear_top_bar()
                 self.clear_hand_printout()
                 return self.menu()
@@ -811,7 +820,7 @@ class CLI:
                 self.clear_hand_printout()
                 self.deal_header()
                 # TODO: Make a more CLI friendly func/object for this
-                deal.deal_test_hands()
+                self.deal_test_hands()
 
             round_info = deal.get_round_info()
             # Print blank space so results always print in the same place
