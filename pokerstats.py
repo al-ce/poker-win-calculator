@@ -4,7 +4,6 @@ from random import shuffle
 from getkey import getkey, keys
 from os import system
 from string import digits
-
 # Hide cursor on program start & exit
 import cursor
 
@@ -12,6 +11,8 @@ cursor.hide()  # Hides the cursor
 
 atexit.register(cursor.show)  # Make sure cursor.show() is called
 # when exiting
+
+
 
 rank = ["2", "3", "4", "5", "6", "7", "8", "9", "10", "J", "Q", "K", "A"]
 suits = ["C", "D", "S", "H"]
@@ -733,6 +734,11 @@ class WinCalculator:
 class CLI:
     header = "Texas Holdem Hand Wins Calculator"
 
+    readme = """
+    * Navigate with (q) (r) (t) (m).
+    * Repeat (r) with 1-9 without leaving the (r)andom page.
+    * (esc) breaks the (t)est input loop and takes you back to this screen.
+    """
     menu_options = "(q)uit (r)andom (t)est (m)enu"
     top_bar_msg = ""
     hand_printout = ""
@@ -766,6 +772,8 @@ class CLI:
     def menu(self):
         while True:
             self.print_header()
+            for line in self.readme.split('\n'):
+                print_lm(line)
             usr_in = key_input()
             if usr_in == "Q":
                 quit_cli()
