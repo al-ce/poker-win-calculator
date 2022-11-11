@@ -1,21 +1,32 @@
+import shutil
+import atexit
 from random import shuffle
 from getkey import getkey
 from os import system
 from string import digits
-import shutil
+
+# Hide cursor on program start & exit
+import cursor
+
+cursor.hide()  # Hides the cursor
+
+atexit.register(cursor.show)  # Make sure cursor.show() is called
+# when exiting
 
 
 def print_centre(s):
     print(s.center(shutil.get_terminal_size().columns))
+
 
 def print_lm(s):
     """Print with a left margin of n"""
     n = 4
     print(" " * n + s)
 
+
 def quit_cli():
     clear()
-    quit()
+    exit()
 
 
 def line_break():
@@ -54,6 +65,12 @@ def none_in(items: list, container: iter) -> bool:
 
 def debug_print(to_print):
     print(to_print)
+
+
+def all_card_combos():
+    rank = ["2", "3", "4", "5", "6", "7", "8", "9", "10", "J", "Q", "K", "A"]
+    suits = ["C", "D", "S", "H"]
+    return [f"{r}{s}" for r in rank for s in suits]
 
 
 class Card:
@@ -113,8 +130,10 @@ class Dealer:
         self.community_cards = []
 
     def get_round_info(self):
-        info = "----------------------------------------\n"\
-        f"Board:    {self.community_cards}\n"
+        info = (
+            "----------------------------------------\n"
+            f"Board:    {self.community_cards}\n"
+        )
         for player in self.players:
             info += f"{player}\n"
         return info
@@ -131,18 +150,28 @@ class Dealer:
     def deal_test_hands(self):
         """Allow user to test specific hands."""
 
+        # Temp list to test for duplicate entries by user
+        test_list = []
+
         def get_user_card_input(j: int) -> list:
-            some_list = []
+            usr_list = []
             for i in range(j):
-                c = input(f"  Card {i+1}: ")
+                while True:
+                    c = input(f"  Card {i+1}: ")
+                    c = c.upper()
+                    if c not in all_card_combos():
+                        print("Invalid Card")
+                    elif c in test_list:
+                        print("Duplicate Card")
+                    else:
+                        test_list.append(c)
+                        break
                 r = "10" if c[0] == "1" else c[0]
                 s = c[2] if c[1] == "0" else c[1]
                 rank = Deck.rank.index(r)
                 card = Card(s, (r, rank + 2))
-                debug_print(card)
-                debug_print(card.rank)
-                some_list.append(card)
-            return some_list
+                usr_list.append(card)
+            return usr_list
 
         for player in self.players:
             debug_print(f"Player {player.id}:")
@@ -698,9 +727,10 @@ class WinCalculator:
 class CLI:
     header = "Texas Holdem Hand Wins Calculator"
 
-    menu_options = "(q)uit (r)andom (b)ack"
+    menu_options = "(q)uit (r)andom (t)est (m)enu"
     top_bar_msg = ""
     hand_printout = ""
+    tot_player_msg = "Please enter a digit 1-9, (q)uit, or (b)ack to main menu"
 
     def print_header(self):
         clear()
@@ -711,17 +741,20 @@ class CLI:
         line_break()
         print_lm(self.top_bar_msg)
 
-    def random_header(self):
+    def deal_header(self):
         self.print_header()
         hand_printout = self.hand_printout.split("\n")
         for line in hand_printout:
             print_lm(line)
 
     def clear_top_bar(self):
-        self.top_bar_msg = ''
+        self.top_bar_msg = ""
+
+    def set_top_bar(self, s: str):
+        self.top_bar_msg = s
 
     def clear_hand_printout(self):
-        self.hand_printout = ''
+        self.hand_printout = ""
 
     def menu(self):
         while True:
@@ -730,40 +763,59 @@ class CLI:
             if usr_in == "q":
                 quit_cli()
             elif usr_in == "r":
-                self.deal_random_hand()
-            elif usr_in == "b":
+                self.deal_hand("random")
+            elif usr_in == "t":
+                self.deal_hand("test")
+            elif usr_in == "m":
                 return self.menu()
         return
 
-    def deal_random_hand(self):
-        self.top_bar_msg = "Please enter a digit 1-9, (q)uit, or (b)ack to main menu"
-        self.random_header()
+    def deal_hand(self, deal_type: str):
+        """Deal a random or custom hand based on deal_type param."""
+        self.set_top_bar(self.tot_player_msg)
+        self.deal_header()
         tot_players = getkey().lower()
         while True:
             if tot_players == "q":
                 quit_cli()
-            elif tot_players == "b":
+            elif tot_players == "t":
+                self.clear_top_bar()
+                self.clear_hand_printout()
+                return self.deal_hand("test")
+            elif tot_players == "r":
+                self.clear_top_bar()
+                self.clear_hand_printout()
+                return self.deal_hand("random")
+            elif tot_players == "m":
                 self.clear_top_bar()
                 self.clear_hand_printout()
                 return self.menu()
             elif tot_players == "" or tot_players not in digits:
-                self.top_bar_msg = "Please enter a digit 1-9, (q)uit, or (b)ack to main menu"
-                return self.deal_random_hand()
+                self.set_top_bar(self.tot_player_msg)
+                return self.deal_hand(deal_type)
+            # Handle 0 as input
             elif tot_players in digits and int(tot_players) < 1:
-                return self.deal_random_hand()
+                return self.deal_hand(deal_type)
 
-            self.top_bar_msg = f"Number of players: {tot_players}"
+            self.set_top_bar(f"Number of players: {tot_players}")
             # Create as many Player objects as needed
             tot_players = int(tot_players)
             players = [Player(i + 1) for i in range(tot_players)]
             deal = Dealer(players)
-            # Deal all cards to players and to the board
-            deal.deal_full_round()
 
-            # Store the round info (board cards + player cards)
+            if deal_type == "random":
+                # Deal all cards to players and to the board
+                deal.deal_full_round()
+                # Store the round info (board cards + player cards)
+            elif deal_type == "test":
+                self.clear_hand_printout()
+                self.deal_header()
+                # TODO: Make a more CLI friendly func/object for this
+                deal.deal_test_hands()
+
             round_info = deal.get_round_info()
             # Print blank space so results always print in the same place
-            round_info += (f"\n" * (9 - tot_players))
+            round_info += "\n" * (9 - tot_players)
 
             for player in deal.players:
                 h = HandCalculator(deal.community_cards, player)
@@ -773,7 +825,7 @@ class CLI:
 
             self.clear_hand_printout()
             self.hand_printout += f"{round_info}\n{results}"
-            self.random_header()
+            self.deal_header()
             tot_players = getkey().lower()
         return
 
@@ -782,6 +834,7 @@ if __name__ == "__main__":
     run = CLI()
     run.menu()
 
+    cursor.show()  # Shows the cursor
 # def main(d: Dealer):
 #
 #     # TODO: make an 'auto-deal' func that automates these
