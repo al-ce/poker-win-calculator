@@ -132,7 +132,7 @@ class Dealer:
     def __init__(self, players: list):
         self.deck = self.get_new_deck()
         # List of Player() objects
-        self.players = [player for player in players]
+        self.players = players
         self.community_cards = []
 
     def get_round_info(self):
@@ -736,7 +736,8 @@ class CLI:
     menu_options = "(q)uit (r)andom (t)est (m)enu"
     top_bar_msg = ""
     hand_printout = ""
-    tot_player_msg = "Please enter a digit 1-9, (q)uit, or (b)ack to main menu"
+    tot_player_msg = "Please enter a digit 1-9 (for number of players), (q)uit, or back to (m)enu"
+    dealt_display = ""
 
     def print_header(self):
         clear()
@@ -747,7 +748,7 @@ class CLI:
         line_break()
         print_lm(self.top_bar_msg)
 
-    def deal_header(self):
+    def deal_hand_header(self):
         self.print_header()
         hand_printout = self.hand_printout.split("\n")
         for line in hand_printout:
@@ -776,13 +777,30 @@ class CLI:
                 return self.menu()
         return
 
-    def deal_test_hands(self):
-        return
+    def deal_test_hands(self, dealer: Dealer):
+        """Pass information directly to the Dealer instead of drawing randomly
+        from a Deck."""
+        # TODO: class inheritance might help me here?
+
+        all_dealt_cards = []
+        for player in dealer.players:
+            player_card_select = CardSelector(
+                2, f"Player {player.id}", all_dealt_cards)
+            player_card_select.screen_draw(self)
+            # Update all dealt cards so duplicates can't be input.
+            all_dealt_cards += player_card_select.get_dealt_cards()
+            player_card_list = player_card_select.convert_strings_to_Cards()
+            player.hole = player_card_list
+
+        comm_card_select = CardSelector(5, "Board", all_dealt_cards)
+        comm_card_select.screen_draw(self)
+        comm_card_list = comm_card_select.convert_strings_to_Cards()
+        dealer.community_cards = comm_card_list
 
     def deal_hand(self, deal_type: str):
         """Deal a random or custom hand based on deal_type param."""
         self.set_top_bar(self.tot_player_msg)
-        self.deal_header()
+        self.deal_hand_header()
         tot_players = key_input()
         while True:
             if tot_players == "Q":
@@ -810,33 +828,111 @@ class CLI:
             # Create as many Player objects as needed
             tot_players = int(tot_players)
             players = [Player(i + 1) for i in range(tot_players)]
-            deal = Dealer(players)
+            dealer = Dealer(players)
 
             if deal_type == "random":
                 # Deal all cards to players and to the board
-                deal.deal_full_round()
+                dealer.deal_full_round()
                 # Store the round info (board cards + player cards)
             elif deal_type == "test":
                 self.clear_hand_printout()
-                self.deal_header()
+                self.deal_hand_header()
                 # TODO: Make a more CLI friendly func/object for this
-                self.deal_test_hands()
+                self.deal_test_hands(dealer)
 
-            round_info = deal.get_round_info()
+            round_info = dealer.get_round_info()
             # Print blank space so results always print in the same place
             round_info += "\n" * (9 - tot_players)
 
-            for player in deal.players:
-                h = HandCalculator(deal.community_cards, player)
+            for player in dealer.players:
+                h = HandCalculator(dealer.community_cards, player)
                 h.report_hands_to_player()
-            w = WinCalculator(deal.players)
+            w = WinCalculator(dealer.players)
             results = w.get_results()
 
             self.clear_hand_printout()
             self.hand_printout += f"{round_info}\n{results}"
-            self.deal_header()
-            tot_players = getkey().lower()
+            self.deal_hand_header()
+            tot_players = key_input()
         return
+
+
+class CardSelector:
+    def __init__(self, max_cards: int, card_location: str, dealt_cards: list):
+        # How many cards to take as input before returning them
+        self.max_cards = max_cards
+        self.card_location = card_location
+
+        self.dealt_cards = dealt_cards
+        self.temp_cards = []
+
+        self.input_display = ""
+
+    def convert_strings_to_Cards(self):
+        """Convert the names in temp_cards to Card objects."""
+        usr_list = []
+        for card in self.temp_cards:
+            # Get card rank, allowing for special case of a 10
+            r = "10" if card[0] == "1" else card[0]
+            s = card[2] if card[1] == "0" else card[1]
+            card_rank = rank.index(r)
+            card = Card(s, (r, card_rank + 2))
+            usr_list.append(card)
+        return usr_list
+
+    def print_cards_display(self, cards_display_string: str):
+        print_lm(cards_display_string)
+
+    def cards_display(self):
+        display = f"{self.card_location}: "
+        for card in self.temp_cards:
+            display += f" {card}"
+        return display
+
+    def clear_input_display(self):
+        self.input_display = ""
+
+    def get_dealt_cards(self):
+        return self.dealt_cards
+
+    def screen_draw(self, cli: CLI):
+        valid_cards = all_card_combos()
+
+        cli.set_top_bar("")
+
+        while True:
+            clear()
+            cli.deal_hand_header()
+            print_lm(cli.dealt_display)
+            line_break()
+            self.print_cards_display(self.cards_display())
+            line_break()
+            print_lm(self.input_display)
+
+            c = key_input()
+            cli.clear_top_bar()
+            if c == keys.BACKSPACE:
+                self.input_display = self.input_display[:-1]
+            elif c == keys.SPACE or c == keys.ENTER:
+                if self.input_display in self.dealt_cards:
+                    cli.set_top_bar("Duplicate Card!")
+                elif self.input_display in valid_cards:
+                    self.temp_cards.append(self.input_display)
+                    self.dealt_cards.append(self.input_display)
+                    if len(self.temp_cards) == self.max_cards:
+                        cli.dealt_display += self.cards_display() + " | "
+                        return self.temp_cards
+                else:
+                    cli.top_bar_msg = "Invalid Card!"
+                self.clear_input_display()
+            elif c == keys.ESCAPE:
+                # TODO: dont quit, just return to menu
+                break
+            else:
+                # Add a character to the input
+                self.input_display += c
+
+        return cli.menu()
 
 
 if __name__ == "__main__":
@@ -844,27 +940,3 @@ if __name__ == "__main__":
     run.menu()
 
     cursor.show()  # Shows the cursor
-# def main(d: Dealer):
-#
-#     # TODO: make an 'auto-deal' func that automates these
-#     d.deal_to_players()
-#     d.deal_flop()
-#     d.deal_turn()
-#     d.deal_river()
-#     d.print_round()
-#
-#     # d.deal_test_hands()
-#
-#     for player in d.players:
-#         h = HandCalculator(d.community_cards, player)
-#
-#     w = WinCalculator(d.players)
-#     w.results()
-#
-#
-# i = 2
-# players = [Player(i + 1) for i in range(i)]
-#
-# for i in range(200000):
-#     d = Dealer(players)
-#     main(d)
