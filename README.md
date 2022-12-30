@@ -1,7 +1,19 @@
-# pokerstats
-Calculate winner of a Holdem round from user input of cards, or generate random Holdem rounds and show the winner.
+# poker-win-calculator
+Calculate winner of a Holdem round from user input of cards, or generate random Holdem rounds and show the winner. Support 1-9 players.
 
 https://user-images.githubusercontent.com/23170004/201289475-c2a95ce7-359a-48f2-a990-c2751f2e0d8d.mov
+
+# Installation
+
+Clone this repository, `cd` into the directory, and install with `pip`.
+
+`$ pip install .`
+
+# Requirements
+
+Python >= 3.7 with `pip`
+
+This program uses the [getkey](https://pypi.org/project/getkey/) module for the cli interface. `pip` will install this if it is not already installed.
 
 # Usage
 
