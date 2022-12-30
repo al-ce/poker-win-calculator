@@ -1,6 +1,7 @@
+import atexit
+import cursor
 import shutil
 from getkey import getkey
-from os import system
 
 CARD_RANK = ["2", "3", "4", "5", "6", "7", "8", "9", "10", "J", "Q", "K", "A"]
 CARD_SUITS = ["C", "D", "S", "H"]
@@ -19,8 +20,9 @@ def all_in(items: list, container: iter) -> bool:
 
 
 def clear():
-    """Clear the terminal screen."""
-    return system("clear")
+    """Clear the terminal screen with ANSI escape codes."""
+    print('\033[1;1H')
+    print('\033[2J')
 
 
 def debug_print(to_print):
@@ -54,6 +56,18 @@ def print_lm(s):
     print(" " * n + s)
 
 
+def start_cli():
+    """Enable an alternative screen buffer to clear the terminal screen.
+    Then, hide the cursor."""
+
+    print('\033[?1049h')
+    cursor.hide()
+    atexit.register(cursor.show)
+
+
 def quit_cli():
-    clear()
+    """Re-enable the cursor, disable the alternative screen buffer,
+    and quit the program."""
+    cursor.show()
+    print('\033[?1049l')
     exit()

@@ -1,5 +1,3 @@
-import atexit
-import cursor
 from getkey import keys
 from string import digits
 
@@ -13,6 +11,7 @@ from poker_win_calculator.helpers import (
     print_centre,
     print_lm,
     quit_cli,
+    start_cli,
 )
 from poker_win_calculator.win_calculator import WinCalculator
 
@@ -56,6 +55,9 @@ class CLI:
         self.hand_printout = ""
 
     def menu(self):
+
+        start_cli()
+
         while True:
             self.print_header()
             for line in self.readme.split('\n'):
@@ -227,14 +229,12 @@ class CardSelector:
 
         return cli.menu()
 
+
 def main():
-    cursor.hide()
-    atexit.register(cursor.show)
 
     run = CLI()
     run.menu()
 
-    cursor.show()  # Shows the cursor
 
 if __name__ == "__main__":
     main()
