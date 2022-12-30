@@ -13,7 +13,6 @@ atexit.register(cursor.show)  # Make sure cursor.show() is called
 # when exiting
 
 
-
 rank = ["2", "3", "4", "5", "6", "7", "8", "9", "10", "J", "Q", "K", "A"]
 suits = ["C", "D", "S", "H"]
 
@@ -266,13 +265,13 @@ class HandCalculator:
         if full_house:
             return full_house
 
-        _st_fl = self.which_straight_or_flush(cards, hands)
-        if _st_fl:
-            return _st_fl
+        st_or_flush = self.which_straight_or_flush(cards, hands)
+        if st_or_flush:
+            return st_or_flush
 
-        set = self.set_check(hands)
-        if set:
-            return set
+        set_of_three = self.set_check(hands)
+        if set_of_three:
+            return set_of_three
 
         two_pair = self.two_pair_check(hands)
         if two_pair:
@@ -287,7 +286,7 @@ class HandCalculator:
 
     def which_straight_or_flush(self, cards: list, hands: dict) -> dict:
         straight = self.straight_check(cards)
-        flush = self.flush_check(cards)
+        flush: list = self.flush_check(cards)
 
         if flush and straight == flush[-1] and straight - 4 == flush[0]:
             if straight == 14:
@@ -296,7 +295,14 @@ class HandCalculator:
         elif straight:
             return {"Straight": straight}
         elif flush:
-            return {"Flush": flush[-1]}
+            order = ["Flush", "Second", "Third", "Fourth", "Fifth"]
+            flush_dict = {}
+
+            for i in range(5):
+                flush_dict[order[i]] = flush[-(i + 1)]
+
+            return flush_dict
+
         return None
 
     def straight_check(self, cards: list) -> int:
@@ -580,7 +586,8 @@ class WinCalculator:
         msg += f"\n{hand_type}, {card_name}s full of {pair_rank}s"
         return msg
 
-    def _SFQ_ties(self, top_hands: list, hand_type, card_name) -> str:
+    def staight_flush_or_quad_ties(
+            self, top_hands: list, hand_type, card_name) -> str:
         """Resolve ties for straights, flushes, or quads."""
         if len(top_hands) > 1:
             msg = self.split_pot_msg(top_hands)
@@ -680,6 +687,32 @@ class WinCalculator:
         msg += f"\n{card_name}-high{tag}"
         return msg
 
+    def flush_ties(self, top_hands: list, hand_type, card_name) -> str:
+        """Resolve ties for flushes."""
+
+        tag = ""
+        if len(top_hands) > 1:
+
+            kickers = ["Second", "Third",
+                       "Fourth", "Fifth"]
+            # If returning a list of players with the highest first/second
+            # kicker only returns one player, announce that kicker
+            for kicker in kickers:
+
+                winners, kicker_rank = self.tiebreaker_info(top_hands, kicker)
+                if len(winners) == 1:
+                    tag = f", {kicker_rank} kicker"
+                    msg = self.announce_winner(winners)
+                    break
+            # If it's ties all the way down, split the pot
+            else:
+                msg = self.split_pot_msg(top_hands)
+        else:
+            msg = self.announce_winner(top_hands)
+        msg += f"\n{card_name}-high Flush{tag}"
+
+        return msg
+
     def get_highest_value(self, top_hands: list, hand_type: str) -> int:
         # Return the highest rank of a given hand type (h_type).
         # top_hands = [(int, {hand_type: rank})]
@@ -702,6 +735,13 @@ class WinCalculator:
 
         high_card = self.get_highest_value(top_hnds, hand_type)
         winners = self.potential_winners(top_hnds, hand_type, high_card)
+
+        # print(self.hands)
+        # print(top_hnds)
+        # print(hand_type)
+        # print(winners)
+        # input()
+
         card_name = self.get_card_name(high_card)
         return winners, card_name
 
@@ -710,12 +750,12 @@ class WinCalculator:
         calling the relevant tie breaking function."""
 
         func_call = {
-            "Royal Flush": self._SFQ_ties,
-            "Straight Flush": self._SFQ_ties,
-            "Quads": self._SFQ_ties,
+            "Royal Flush": self.staight_flush_or_quad_ties,
+            "Straight Flush": self.staight_flush_or_quad_ties,
+            "Quads": self.staight_flush_or_quad_ties,
             "Full House": self.full_house_ties,
-            "Flush": self._SFQ_ties,
-            "Straight": self._SFQ_ties,
+            "Flush": self.flush_ties,
+            "Straight": self.staight_flush_or_quad_ties,
             "Set": self.set_ties,
             "Two Pair": self.two_pair_ties,
             "One Pair": self.one_pair_ties,
