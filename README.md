@@ -17,6 +17,8 @@ This program uses the [getkey](https://pypi.org/project/getkey/) module for the 
 
 # Usage
 
+After install, run `poker-win-calculator` in your terminal.
+
 *(q)* to quit, *(m)* to return to the main menu.
 
 ## Test specific hands (t)
