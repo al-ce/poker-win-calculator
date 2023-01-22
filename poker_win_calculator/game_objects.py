@@ -62,7 +62,9 @@ class Dealer:
         self.players = players
         self.community_cards = []
 
-    def get_round_info(self):
+    def get_round_info(self) -> str:
+        """Return a string with info about the current round."""
+
         info = (
             "----------------------------------------\n"
             f"Board:    {self.community_cards}\n"
@@ -72,23 +74,26 @@ class Dealer:
         return info
 
     def print_round(self):
+        """Print info about the current round."""""
         print("----------------------------------------")
         print(f"Board:    {self.community_cards}")
         [print(player) for player in self.players]
         line_break()
 
     def burn_card(self):
+        """Simulate burning a card by popping it off the deck list."""
         self.deck.pop()
 
     def deal_test_hands(self):
-        """Allow user to test specific hands."""
+        """Allow user to test specific hands by getting user input."""
 
         # Temp list to test for duplicate entries by user
         test_list = []
 
-        def get_user_card_input(j: int) -> list:
+        def get_user_card_input(n: int) -> list:
+            """Get user input to select n number of cards."""
             usr_list = []
-            for i in range(j):
+            for i in range(n):
                 while True:
                     c = input(f"  Card {i+1}: ")
                     c = c.upper()
@@ -116,6 +121,7 @@ class Dealer:
         self.community_cards = comm_cards
 
     def deal_card(self, location=0) -> Card:
+        """Deal a card to a player or the board."""
         card = self.deck.pop()
         card.location = location
         # Place card at the "bottom" of the deck so it can be used in
@@ -132,17 +138,22 @@ class Dealer:
         self.deal_river()
 
     def deal_flop(self):
+        """Deal the flop to the board. Burns one card and deals three."""
         self.burn_card()
-        [self.deal_to_community_cards() for i in range(3)]
+        [self.deal_to_community_cards() for _ in range(3)]
 
     def deal_river(self):
+        """Deal the river to the board. Burns one card and deals one."""""
+        self.burn_card()
         self.deal_to_community_cards()
 
     def deal_to_community_cards(self):
+        """Append a dealt card to the community cards list."""""
         card = self.deal_card()
         self.community_cards.append(card)
 
     def deal_to_players(self):
+        """Deal two cards to each player."""
         for player in self.players:
             hole = []
             for _ in range(2):
@@ -151,6 +162,7 @@ class Dealer:
             player.hole = sorted(hole, reverse=True)
 
     def deal_turn(self):
+        """Deal the turn to the board. Burns one card and deals one."""""
         self.burn_card()
         self.deal_to_community_cards()
 

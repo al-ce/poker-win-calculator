@@ -15,9 +15,12 @@ class HandCalculator:
         self.dealt = sorted(self.hole + self.comm_cards, reverse=True)
 
     def report_hands_to_player(self):
+        """Report the player's hands to the player object."""
         self.player.hands = self.get_hands(self.dealt)
 
     def get_hands(self, cards: list) -> dict:
+        """Return a dict of all possible hands and their values."""
+
         # Return a simplified dict based on player's hands
         hands = self.matches_check(cards)
         hands = self.sort_matches(hands)
@@ -30,7 +33,7 @@ class HandCalculator:
         if full_house:
             return full_house
 
-        st_or_flush = self.which_straight_or_flush(cards, hands)
+        st_or_flush = self.best_straight_or_flush(cards, hands)
         if st_or_flush:
             return st_or_flush
 
@@ -49,7 +52,8 @@ class HandCalculator:
         # kickers may be needed to break a tie.
         return hands
 
-    def which_straight_or_flush(self, cards: list, hands: dict) -> dict:
+    def best_straight_or_flush(self, cards: list, hands: dict) -> dict:
+        """Return a dict of the best straight or flush."""
         straight = self.straight_check(cards)
         flush: list = self.flush_check(cards)
 
@@ -71,6 +75,7 @@ class HandCalculator:
         return None
 
     def straight_check(self, cards: list) -> int:
+        """Return the highest card in the straight, or None if no straight."""
         ranks = [card.rank for card in cards]
         for rank in ranks:
             test_range = range(rank, rank - 5, -1)
@@ -80,8 +85,11 @@ class HandCalculator:
         ace_five = [2, 3, 4, 5, 14]
         if set(ace_five).issubset(ranks):
             return 5
+        return None
 
     def flush_check(self, cards: list) -> list:
+        """Return a list of the highest five cards in the flush, or None if no
+        flush."""
         suited_count = {}
         for card in cards:
             suit = card.suit
@@ -97,11 +105,14 @@ class HandCalculator:
         return flush
 
     def quads_check(self, hands: dict) -> dict:
+        """Return a dict of the quads and the kicker, or None if no quads."""
         if "Quads" in hands:
             return {"Quads": hands.get("Quads")}
         return None
 
     def two_pair_check(self, hands: dict) -> dict:
+        """Return a dict of the two pairs and the kicker, or None if no two
+        pairs."""
         two_pairs = ["One Pair", "Low Pair"]
         if "Set" not in hands and all_in(two_pairs, hands):
             two_pair_dict = {
@@ -114,6 +125,8 @@ class HandCalculator:
         return None
 
     def one_pair_check(self, hands: dict) -> dict:
+        """Return a dict of the one pair and the kickers, or None if no one
+        pair."""
         pair_override = ["Two Pair", "Set", "Full House", "Quads"]
         if "One Pair" in hands and none_in(pair_override, hands):
             kickers = ["High Card", "Second Kicker", "Third Kicker"]
@@ -125,6 +138,7 @@ class HandCalculator:
         return None
 
     def set_check(self, hands: dict) -> dict:
+        """Return a dict of the set and the kickers, or None if no set."""
         set_override = ["Quads", "Flush", "Straight"]
         if "Set" in hands and none_in(set_override, hands):
             # Don't need a third kicker for Set tiebreakers
@@ -137,6 +151,8 @@ class HandCalculator:
         return None
 
     def full_house_check(self, hands: dict) -> dict:
+        """Return a dict of the full house and the kicker, or None if no full
+        house."""
         full_house = ["Set", "One Pair"]
         if all_in(full_house, hands):
             full_house_dict = {
@@ -161,6 +177,7 @@ class HandCalculator:
         return matches
 
     def sort_matches(self, matches: dict) -> dict:
+        """Sort matches dict by size of match, then by rank of match."""
         match_types = {2: "One Pair", 3: "Set", 4: "Quads"}
         hands = {
             "Low Pair": 0,
@@ -197,6 +214,7 @@ class HandCalculator:
         return hands
 
     def add_kickers_to_hands(self, hands: dict) -> dict:
+        """Add kickers to hands dict."""
         # We only check against the matched ranks (ranks that are in pairs,
         # sets, or quads) because kickers are irrelevant in straights/flushes.
         matched_ranks = hands.values()

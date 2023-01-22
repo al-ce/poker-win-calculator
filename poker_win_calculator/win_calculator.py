@@ -42,14 +42,17 @@ class WinCalculator:
             self.top_hands, self.top_ranked_hand)
 
     def print_results(self):
+        """Prints the results of the round."""
         print(self.win_results)
         line_break()
         line_break()
 
     def get_results(self):
+        """Returns the results of the round."""
         return self.win_results
 
     def print_all_player_hands(self):
+        """Prints all player's hands from the round."""
         for pid, pdata in self.top_hands:
             print(f"Player {pid}:")
             for hand, rank in pdata.items():
@@ -67,7 +70,9 @@ class WinCalculator:
         return self.card_ranks[card_rank - 2]
 
     def get_top_hands(self, hands: list) -> tuple:
+        """Returns a list of the top hands and the top ranked hand."""
         def set_player_highest_hand(player_id: int, hand_rank: str):
+            """Sets the highest hand for a player."""
             self.players[player_id - 1].highest_hand = hand_rank
 
         temp_rank_data = {rank: [] for rank in self.rank_types}
@@ -97,7 +102,7 @@ class WinCalculator:
                 return top_hands, rank
 
     def tag_msg(self, hand_type: str, card_name: str, msg: str) -> str:
-        # Tags to put at the end of the message based on certain hand types
+        """Adds a tag to the end of the message based on the hand type."""
         if hand_type == "Royal Flush":
             return "\nRoyal Flush"
         elif hand_type == "High Card":
@@ -108,6 +113,7 @@ class WinCalculator:
         return f"{msg}{tag}"
 
     def split_pot_msg(self, winners: list) -> str:
+        """Returns a message for a split pot."""
         msg = "Split Pot -"
         for player in winners:
             player_id = player[0]
@@ -115,6 +121,7 @@ class WinCalculator:
         return msg[:-1]
 
     def announce_winner(self, winners_list: list) -> str:
+        """Returns a message for a single winner."""
         player_id = winners_list[0][0]
         return f"Player {player_id} wins!"
 
@@ -146,7 +153,6 @@ class WinCalculator:
 
     def set_ties(self, top_hands: list, hand_type, card_name) -> str:
         """Resolve ties for sets."""
-
         tag = ""
         if len(top_hands) > 1:
             kickers = ["High Card", "Second Kicker"]
@@ -262,8 +268,7 @@ class WinCalculator:
         return msg
 
     def get_highest_value(self, top_hands: list, hand_type: str) -> int:
-        # Return the highest rank of a given hand type (h_type).
-        # top_hands = [(int, {hand_type: rank})]
+        """Return the highest value of a given hand type."""""
         _list = sorted(top_hands, key=lambda d: d[1][hand_type], reverse=True)
         high_card = _list[0][1].get(hand_type)
         return high_card
@@ -271,8 +276,8 @@ class WinCalculator:
     def potential_winners(
         self, top_hands: list, hand_type: str, high_card: int
     ) -> list:
-        # Return a list of potential winners, i.e. all players that
-        # have the highest ranking card of a given hand type (h_type)
+        """Return a list of potential winners based on all players that
+        have the highest ranking card of a given hand type (h_type)"""
         winners = []
         for pid, data in top_hands:
             if data.get(hand_type) == high_card:
@@ -280,6 +285,7 @@ class WinCalculator:
         return winners
 
     def tiebreaker_info(self, top_hnds: list, hand_type: str) -> tuple:
+        """Return the tiebreaker info including the winner(s) and the"""
 
         high_card = self.get_highest_value(top_hnds, hand_type)
         winners = self.potential_winners(top_hnds, hand_type, high_card)

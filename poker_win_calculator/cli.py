@@ -31,6 +31,7 @@ class CLI:
     dealt_display = ""
 
     def print_header(self):
+        """Print a standard header on each page of the CLI."""
         clear()
         line_break()
         print_centre(self.header)
@@ -40,21 +41,26 @@ class CLI:
         print_lm(self.top_bar_msg)
 
     def deal_hand_header(self):
+        """Print a standard header on the deal hand page of the CLI."""
         self.print_header()
         hand_printout = self.hand_printout.split("\n")
         for line in hand_printout:
             print_lm(line)
 
     def clear_top_bar(self):
+        """Clear the top bar message."""
         self.top_bar_msg = ""
 
     def set_top_bar(self, s: str):
+        """Set the top bar message."""
         self.top_bar_msg = s
 
     def clear_hand_printout(self):
+        """Clear the hand printout."""
         self.hand_printout = ""
 
     def menu(self):
+        """Run the main menu of the CLI."""
 
         start_cli()
 
@@ -177,21 +183,26 @@ class CardSelector:
         return usr_list
 
     def print_cards_display(self, cards_display_string: str):
+        """Print the cards_display string."""
         print_lm(cards_display_string)
 
     def cards_display(self):
+        """Return a string to display the cards in temp_cards."""
         display = f"{self.card_location}: "
         for card in self.temp_cards:
             display += f" {card}"
         return display
 
     def clear_input_display(self):
+        """Clear the input display."""
         self.input_display = ""
 
     def get_dealt_cards(self):
+        """Return the list of dealt cards."""""
         return self.dealt_cards
 
     def screen_draw(self, cli: CLI):
+        """Draw the CLI screen for the user to input cards."""
         valid_cards = all_card_combos()
 
         cli.set_top_bar("")

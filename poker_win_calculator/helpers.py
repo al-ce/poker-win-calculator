@@ -8,6 +8,7 @@ CARD_SUITS = ["C", "D", "S", "H"]
 
 
 def all_card_combos():
+    """Return a list of all possible card combinations."""
     return [f"{r}{s}" for r in CARD_RANK for s in CARD_SUITS]
 
 
@@ -26,15 +27,18 @@ def clear():
 
 
 def debug_print(to_print):
+    """Print a debug message to the terminal."""
     print(to_print)
 
 
 def key_input():
+    """Return the getkey().upper() value of the key pressed."""
     usr_in = getkey().upper()
     return usr_in
 
 
 def line_break():
+    """Print a line break."""
     print("\n", end="")
 
 
@@ -47,7 +51,9 @@ def none_in(items: list, container: iter) -> bool:
 
 
 def print_centre(s):
-    print(s.center(shutil.get_terminal_size().columns))
+    """Print a string centred on the terminal screen."""
+    width = shutil.get_terminal_size().columns
+    print(s.center(width))
 
 
 def print_lm(s):
@@ -71,3 +77,4 @@ def quit_cli():
     cursor.show()
     print('\033[?1049l')
     exit()
+
